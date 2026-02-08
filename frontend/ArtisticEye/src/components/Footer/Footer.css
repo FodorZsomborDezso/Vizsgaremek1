@@ -1,0 +1,149 @@
+/* --- Változók (Ugyanazok, mint a Headerben a konzisztencia miatt) --- */
+:root {
+    --footer-bg: #151525; /* Kicsit sötétebb, mint a Header (#1a1a2e), hogy elkülönüljön */
+    --footer-text: #b3b3b3; /* Törtfehér a jobb olvashatóságért */
+    --footer-title: #ffffff;
+    --accent-color: #00d4ff;
+  }
+  
+  /* --- Fő Konténer --- */
+  .footer-container {
+    background-color: var(--footer-bg);
+    color: var(--footer-text);
+    padding: 60px 20px 20px; /* Fent nagyobb térköz */
+    margin-top: auto; /* Ez tolja le a footert, ha flexboxban van az oldal */
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap; /* Mobilon tördelődjön */
+    justify-content: space-between;
+    gap: 40px;
+  }
+  
+  /* --- Oszlopok Stílusa --- */
+  .footer-section {
+    flex: 1; /* Egyenlő elosztás */
+    min-width: 250px; /* Ne nyomódjon össze túlságosan */
+  }
+  
+  /* Címsorok */
+  .footer-section h3 {
+    color: var(--footer-title);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    position: relative;
+    display: inline-block;
+  }
+  
+  /* Kis aláhúzás a címek alatt */
+  .footer-section h3::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 30px;
+    height: 2px;
+    background-color: var(--accent-color);
+  }
+  
+  /* --- 1. Oszlop: Brand --- */
+  .footer-logo {
+    color: #fff;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+  }
+  
+  .highlight {
+    color: var(--accent-color);
+  }
+  
+  .footer-desc {
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+  
+  /* --- 2. Oszlop: Linkek --- */
+  .footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .footer-links li {
+    margin-bottom: 10px;
+  }
+  
+  .footer-links a {
+    text-decoration: none;
+    color: var(--footer-text);
+    transition: color 0.3s ease, padding-left 0.3s ease;
+  }
+  
+  /* Hover effekt: színváltás + kis elmozdulás jobbra */
+  .footer-links a:hover {
+    color: var(--accent-color);
+    padding-left: 5px;
+  }
+  
+  /* --- 3. Oszlop: Social & Contact --- */
+  .contact-info p {
+    margin: 5px 0;
+  }
+  
+  .social-links {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+  }
+  
+  .social-icon {
+    text-decoration: none;
+    color: var(--footer-bg);
+    background-color: var(--footer-text);
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+  }
+  
+  .social-icon:hover {
+    background-color: var(--accent-color);
+    color: #fff;
+    transform: translateY(-3px);
+  }
+  
+  /* --- Alsó Sáv (Copyright) --- */
+  .footer-bottom {
+    text-align: center;
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+  
+  /* --- Mobil Nézet --- */
+  @media (max-width: 768px) {
+    .footer-content {
+      flex-direction: column; /* Egymás alá kerülnek */
+      gap: 30px;
+    }
+    
+    .footer-section {
+      text-align: center; /* Mobilon középre igazítva szebb */
+    }
+  
+    .footer-section h3::after {
+      left: 50%;
+      transform: translateX(-50%); /* Az aláhúzás is középre */
+    }
+  
+    .social-links {
+      justify-content: center;
+    }
+  }

@@ -1,0 +1,43 @@
+:root {
+  /* SÖTÉT TÉMA (Alapértelmezett) */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --header-bg: #0f3460;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --accent-color: #00d4ff;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] {
+  /* VILÁGOS TÉMA */
+  --bg-primary: #f4f6f8;
+  --bg-secondary: #ffffff;
+  --header-bg: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #555555;
+  --accent-color: #007bff;
+  --border-color: rgba(0, 0, 0, 0.1);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  font-family: sans-serif;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 80px; /* Hogy ne takarja ki a Header */
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
