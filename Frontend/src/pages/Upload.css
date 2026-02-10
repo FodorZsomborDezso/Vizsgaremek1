@@ -1,0 +1,63 @@
+/* src/pages/Upload.css */
+.upload-wrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.upload-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: var(--shadow);
+}
+
+.upload-area {
+  border: 2px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: var(--bg-primary);
+  margin-bottom: 20px;
+}
+
+.upload-area:hover {
+  border-color: var(--accent-color);
+  background-color: rgba(0, 212, 255, 0.05);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* Előnézet */
+.preview-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.preview-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain; /* Hogy a teljes kép látszódjon */
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.remove-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0,0,0,0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}

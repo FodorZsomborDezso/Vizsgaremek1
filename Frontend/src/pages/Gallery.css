@@ -1,0 +1,80 @@
+/* src/pages/Gallery.css */
+.gallery-container {
+  padding: 20px 0;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Kereső és Szűrő Sáv */
+.gallery-controls {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.search-bar {
+  position: relative;
+  max-width: 500px;
+  margin: 0 auto 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 20px 12px 45px; /* Hely az ikonnak */
+  border-radius: 25px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+}
+
+/* Kategória Gombok */
+.category-filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.filter-btn.active {
+  background-color: var(--accent-color);
+  color: #fff; /* Mindig fehér, mert a gomb színes */
+  border-color: var(--accent-color);
+}
+
+/* Üres találat */
+.no-results {
+  text-align: center;
+  color: var(--text-secondary);
+  margin-top: 50px;
+  font-size: 1.2rem;
+}
