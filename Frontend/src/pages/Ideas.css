@@ -1,0 +1,119 @@
+/* src/pages/Ideas.css */
+.ideas-container {
+  padding: 40px 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.ideas-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.new-idea-btn {
+  background-color: var(--accent-color);
+  color: #fff;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: transform 0.2s;
+}
+
+.new-idea-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+}
+
+/* Ötlet Kártyák */
+.ideas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.idea-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  padding: 25px;
+  position: relative;
+  transition: transform 0.2s, border-color 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.idea-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-color);
+}
+
+.idea-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.idea-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.user-avatar-small {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+}
+
+.idea-category {
+  background-color: rgba(0, 212, 255, 0.1);
+  color: var(--accent-color);
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.idea-content h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+  font-size: 1.3rem;
+}
+
+.idea-content p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.idea-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.action-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--accent-color);
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+}

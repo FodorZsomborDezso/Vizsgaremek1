@@ -34,6 +34,19 @@ const Upload = () => {
     <div className="upload-wrapper">
       <div className="upload-card">
         <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Új Alkotás Feltöltése</h2>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label>Mit töltesz fel?</label>
+            <select 
+              style={{
+                width: '100%', padding: '10px', borderRadius: '8px', 
+                backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              <option value="gallery">Saját alkotás (Galéria)</option>
+              <option value="response">Válasz egy ötletre (Ötletbörze)</option>
+            </select>
+          </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           

@@ -1,76 +1,154 @@
+
 /* src/pages/Profile.css */
-.profile-header {
-  position: relative;
-  margin-bottom: 60px;
+
+.profile-container {
+  max-width: 900px; /* Ne legyen túl széles monitoron */
+  margin: 0 auto;
+  padding-bottom: 40px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* --- 1. FEJLÉC ÉS BORÍTÓ --- */
+.profile-card {
+  background-color: var(--bg-secondary);
+  border-radius: 0 0 15px 15px; /* Csak alul kerekítjük */
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  border-top: none; /* Fent illeszkedjen a headerhez */
+  margin-bottom: 30px;
+  padding-bottom: 30px;
 }
 
 .cover-photo {
   width: 100%;
-  height: 200px;
-  background: linear-gradient(45deg, var(--accent-color), #6a11cb);
-  border-radius: 0 0 15px 15px;
+  height: 220px;
+  background: linear-gradient(135deg, var(--accent-color), #6a11cb);
+  position: relative;
 }
 
-.profile-info {
-  position: absolute;
-  bottom: -40px;
-  left: 50%;
-  transform: translateX(-50%);
+.profile-content {
   text-align: center;
-  width: 100%;
+  margin-top: -60px; /* Ez húzza fel az avatárt a borítóképbe */
+  padding: 0 20px;
+  position: relative; /* Kiemeljük a rétegből */
+  z-index: 2;
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
-  border: 4px solid var(--bg-primary); /* Hogy elváljon a háttértől */
+  border: 5px solid var(--bg-secondary); /* A szegély színe mindig a kártya háttérszíne! */
   object-fit: cover;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  background-color: var(--bg-secondary);
+}
+
+/* --- 2. SZÖVEGEK ÉS ADATOK --- */
+.profile-name-section {
+  margin-top: 15px;
 }
 
 .profile-name {
-  margin-top: 10px;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: var(--text-primary);
+  margin: 0;
 }
 
+.profile-username {
+  color: var(--accent-color);
+  font-weight: 600;
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.profile-bio {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 500px;
+  margin: 15px auto; /* Középre igazítja a szöveget */
+}
+
+/* Szerkesztés gomb */
+.edit-profile-btn {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.edit-profile-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background-color: rgba(0, 212, 255, 0.05);
+}
+
+/* --- 3. STATISZTIKA --- */
 .profile-stats {
   display: flex;
   justify-content: center;
-  gap: 30px;
-  margin: 60px 0 30px;
+  gap: 40px;
+  margin: 30px 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
   text-align: center;
 }
 
-.stat-item h3 {
-  margin: 0;
-  color: var(--accent-color);
-  font-size: 1.5rem;
+.stat-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.stat-item p {
-  margin: 0;
+.stat-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  margin-top: 5px;
 }
 
-/* FÜLEK (TABS) */
+/* --- 4. TABS (Váltó gombok) --- */
 .profile-tabs {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 10px;
+  margin-bottom: 25px;
   border-bottom: 1px solid var(--border-color);
+  padding: 0 10px;
 }
 
 .tab-btn {
   background: none;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 25px;
   color: var(--text-secondary);
   font-size: 1rem;
   cursor: pointer;
   position: relative;
+  transition: color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
@@ -78,6 +156,7 @@
   font-weight: bold;
 }
 
+/* Az aktív fül alatti csík */
 .tab-btn.active::after {
   content: '';
   position: absolute;
@@ -86,4 +165,13 @@
   width: 100%;
   height: 3px;
   background-color: var(--accent-color);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Üres állapot üzenete */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-style: italic;
 }

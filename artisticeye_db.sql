@@ -1,0 +1,224 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.3
+-- https://www.phpmyadmin.net/
+--
+-- Gép: db:3306
+-- Létrehozás ideje: 2026. Feb 15. 19:49
+-- Kiszolgáló verziója: 8.0.45
+-- PHP verzió: 8.3.26
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Adatbázis: `artisticeye_db`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` int NOT NULL,
+  `name` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `follows`
+--
+
+CREATE TABLE `follows` (
+  `follower_id` int NOT NULL,
+  `followed_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `ideas`
+--
+
+CREATE TABLE `ideas` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `category_id` int NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `description` text NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `likes`
+--
+
+CREATE TABLE `likes` (
+  `user_id` int NOT NULL,
+  `post_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `posts`
+--
+
+CREATE TABLE `posts` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `category_id` int DEFAULT NULL,
+  `idea_id` int DEFAULT NULL,
+  `title` varchar(150) DEFAULT NULL,
+  `description` text,
+  `image_url` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tábla szerkezet ehhez a táblához `users`
+--
+
+CREATE TABLE `users` (
+  `id` int NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `full_name` varchar(100) DEFAULT NULL,
+  `bio` text,
+  `location` varchar(100) DEFAULT NULL,
+  `website` varchar(200) DEFAULT NULL,
+  `avatar_url` varchar(255) DEFAULT 'https://via.placeholder.com/150',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Indexek a kiírt táblákhoz
+--
+
+--
+-- A tábla indexei `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- A tábla indexei `follows`
+--
+ALTER TABLE `follows`
+  ADD PRIMARY KEY (`follower_id`,`followed_id`),
+  ADD KEY `followed_id` (`followed_id`);
+
+--
+-- A tábla indexei `ideas`
+--
+ALTER TABLE `ideas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `category_id` (`category_id`);
+
+--
+-- A tábla indexei `likes`
+--
+ALTER TABLE `likes`
+  ADD PRIMARY KEY (`user_id`,`post_id`),
+  ADD KEY `post_id` (`post_id`);
+
+--
+-- A tábla indexei `posts`
+--
+ALTER TABLE `posts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `idea_id` (`idea_id`);
+
+--
+-- A tábla indexei `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- A kiírt táblák AUTO_INCREMENT értéke
+--
+
+--
+-- AUTO_INCREMENT a táblához `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT a táblához `ideas`
+--
+ALTER TABLE `ideas`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT a táblához `posts`
+--
+ALTER TABLE `posts`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT a táblához `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- Megkötések a kiírt táblákhoz
+--
+
+--
+-- Megkötések a táblához `follows`
+--
+ALTER TABLE `follows`
+  ADD CONSTRAINT `follows_ibfk_1` FOREIGN KEY (`follower_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `follows_ibfk_2` FOREIGN KEY (`followed_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Megkötések a táblához `ideas`
+--
+ALTER TABLE `ideas`
+  ADD CONSTRAINT `ideas_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `ideas_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`);
+
+--
+-- Megkötések a táblához `likes`
+--
+ALTER TABLE `likes`
+  ADD CONSTRAINT `likes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `likes_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `posts` (`id`) ON DELETE CASCADE;
+
+--
+-- Megkötések a táblához `posts`
+--
+ALTER TABLE `posts`
+  ADD CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `posts_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `posts_ibfk_3` FOREIGN KEY (`idea_id`) REFERENCES `ideas` (`id`) ON DELETE SET NULL;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

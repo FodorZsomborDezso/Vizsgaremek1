@@ -19,15 +19,18 @@ const Footer = () => {
           </p>
         </div>
 
-        {/* 2. Oszlop: Bővített Linkek */}
+        {/* 2. Oszlop: FELFEDEZÉS (Itt kérted a módosítást) */}
         <div className="footer-section links-section">
           <h3>Felfedezés</h3>
           <ul className="footer-links">
             <li><Link to="/">Főoldal</Link></li>
             <li><Link to="/gallery">Galéria Böngészése</Link></li>
+            
+            {/* ÚJ LINK ITT: */}
+            <li><Link to="/ideas">Ötletbörze & Inspiráció</Link></li>
+            
             <li><Link to="/upload">Új kép feltöltése</Link></li>
             <li><Link to="/profile">Saját Profil</Link></li>
-            <li><Link to="/login">Bejelentkezés</Link></li>
           </ul>
         </div>
 
@@ -41,8 +44,7 @@ const Footer = () => {
           </div>
           
           <div className="social-links">
-            <a href="https://github.com/FodorZsomborDezso" target="_blank" rel="noreferrer" className="social-icon"><FaGithub /> GitHub(Ákos)</a>
-            <a href="https://github.com/akos060316" target="_blank" rel="noreferrer" className="social-icon"><FaGithub /> Github(Zsombor)</a>
+            <a href="https://github.com" target="_blank" rel="noreferrer" className="social-icon"><FaGithub /> GitHub</a>
           </div>
         </div>
 

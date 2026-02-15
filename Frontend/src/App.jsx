@@ -5,6 +5,7 @@ import Footer from './components/Footer/Footer';
 import Home from './pages/Home';
 import Gallery from './pages/Gallery'; // <--- ÚJ
 import Upload from './pages/Upload';   // <--- ÚJ
+import Ideas from './pages/Ideas'; // <--- ÚJ IMPORT
 
 // Importáljuk a többi oldalt is (LÉTEZNIE KELL A FÁJLNAK!)
 import Login from './pages/Login';
@@ -34,6 +35,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} /> {/* <--- ÚJ */}
           <Route path="/upload" element={<Upload />} />   {/* <--- ÚJ */}
+          <Route path="/ideas" element={<Ideas />} /> {/* <--- ÚJ ÚTVONAL */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
