@@ -1,42 +1,30 @@
-import { useState } from 'react';
-import { FaLightbulb, FaPenFancy, FaCommentDots, FaPalette } from 'react-icons/fa';
+import { useState, useEffect } from 'react'; // useEffect kell a lekérdezéshez
+import { FaLightbulb, FaPenFancy, FaPalette } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import './Ideas.css';
 
 const Ideas = () => {
-  // DUMMY ADATOK: Ötletek, amiket felhasználók írtak ki
-  const [ideas, setIdeas] = useState([
-    {
-      id: 1,
-      user: "SciFiFan_99",
-      avatar: "https://ui-avatars.com/api/?name=SciFi&background=random",
-      title: "Futurisztikus Budapest könyvborító",
-      description: "Egy sci-fi regényt írok, ami 2080-ban játszódik Budapesten. Szükségem lenne egy borítótervre, amin a Lánchíd neon fényekben úszik, és repülő autók vannak felette.",
-      category: "Digitális Art",
-      responses: 3,
-      date: "2 órája"
-    },
-    {
-      id: 2,
-      user: "CoffeeLover",
-      avatar: "https://ui-avatars.com/api/?name=Coffee&background=random",
-      title: "Logó egy új kávézónak",
-      description: "Nyitok egy kis kézműves kávézót 'Reggeli Harmat' néven. Szeretnék egy minimalista, vonalas logót, amiben van egy kávéscsésze és egy levél.",
-      category: "Grafika",
-      responses: 12,
-      date: "1 napja"
-    },
-    {
-      id: 3,
-      user: "GamerBoy",
-      avatar: "https://ui-avatars.com/api/?name=Gamer&background=random",
-      title: "Karakterterv RPG játékhoz",
-      description: "Keresek valakit, aki le tud rajzolni egy középkori harcost, akinek az egyik karja robotikus. Sötét, komor hangulatot képzelek el.",
-      category: "Karakter Design",
-      responses: 0,
-      date: "3 napja"
-    }
-  ]);
+  const [ideas, setIdeas] = useState([]); // Üres tömbbel indulunk
+  const [loading, setLoading] = useState(true); // Töltés állapot
+  const [error, setError] = useState(null); // Hiba állapot
+
+  // Amikor az oldal betöltődik, lekérjük az adatokat
+  useEffect(() => {
+    fetch('http://localhost:3000/api/ideas')
+      .then(response => {
+        if (!response.ok) { throw new Error('Hiba a szerver elérésében'); }
+        return response.json();
+      })
+      .then(data => {
+        setIdeas(data); // Beállítjuk a kapott adatokat
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Fetch error:", err);
+        setError("Nem sikerült betölteni az ötleteket. Fut a backend?");
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="ideas-container">
@@ -48,7 +36,6 @@ const Ideas = () => {
           Ötletbörze
         </h1>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '10px auto' }}>
-          Van egy jó ötleted, de nem tudod megrajzolni? Vagy inspirációt keresel? 
           Oszd meg az elképzelésedet, és a közösség alkotói megvalósítják!
         </p>
         <button className="new-idea-btn">
@@ -56,17 +43,22 @@ const Ideas = () => {
         </button>
       </div>
 
+      {/* HIBAKEZELÉS ÉS TÖLTÉS */}
+      {loading && <p style={{textAlign: 'center'}}>Betöltés...</p>}
+      {error && <p style={{textAlign: 'center', color: 'red'}}>{error}</p>}
+
       {/* ÖTLETEK LISTÁJA */}
       <div className="ideas-list">
-        {ideas.map((idea) => (
+        {!loading && !error && ideas.map((idea) => (
           <div key={idea.id} className="idea-card">
             
             <div className="idea-header">
               <div className="idea-user">
-                <img src={idea.avatar} alt="Avatar" className="user-avatar-small" />
-                <span>@{idea.user}</span>
+                {/* Figyeld meg: most már az adatbázis mezőit használjuk! */}
+                <img src={idea.avatar_url} alt="Avatar" className="user-avatar-small" />
+                <span>@{idea.username}</span>
               </div>
-              <span className="idea-category">{idea.category}</span>
+              <span className="idea-category">{idea.category_name}</span>
             </div>
 
             <div className="idea-content">
@@ -75,9 +67,8 @@ const Ideas = () => {
             </div>
 
             <div className="idea-footer">
-              <span>{idea.date} • {idea.responses} válasz</span>
+              <span>{new Date(idea.created_at).toLocaleDateString()}</span>
               
-              {/* Ez a gomb vinné a felhasználót a feltöltéshez, hivatkozva erre az ötletre */}
               <Link to="/upload" style={{ textDecoration: 'none' }}>
                 <button className="action-btn">
                   <FaPalette style={{ marginRight: '5px' }} /> Megvalósítom

@@ -1,5 +1,5 @@
 :root {
-  /* SÖTÉT TÉMA (Alapértelmezett) */
+  
   --bg-primary: #1a1a2e;
   --bg-secondary: #16213e;
   --header-bg: #0f3460;
@@ -9,8 +9,13 @@
   --border-color: rgba(255, 255, 255, 0.1);
 }
 
+html {
+  
+  scrollbar-gutter: stable; 
+}
+
 [data-theme="light"] {
-  /* VILÁGOS TÉMA */
+  
   --bg-primary: #f4f6f8;
   --bg-secondary: #ffffff;
   --header-bg: #ffffff;
@@ -36,7 +41,7 @@ body {
 
 .main-content {
   flex: 1;
-  padding-top: 80px; /* Hogy ne takarja ki a Header */
+  padding-top: 80px; 
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
