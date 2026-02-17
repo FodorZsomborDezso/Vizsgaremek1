@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FaUserCircle } from 'react-icons/fa'; // Ikon a profilkép mezőhöz
 import './Auth.css';
 
 const Register = () => {
@@ -9,7 +10,8 @@ const Register = () => {
     username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    avatar_url: '' // ÚJ MEZŐ
   });
 
   const [error, setError] = useState('');
@@ -24,28 +26,27 @@ const Register = () => {
     setError('');
     setSuccess('');
 
-    // Validáció
     if (formData.password !== formData.confirmPassword) {
       setError('A két jelszó nem egyezik meg!');
       return;
     }
 
     try {
-      // POST kérés küldése a Backendnek
       const response = await fetch('http://localhost:3000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          avatar_url: formData.avatar_url // Elküldjük ezt is!
         })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Sikeres regisztráció! Átirányítás a belépéshez...');
+        setSuccess('Sikeres regisztráció! Most már van profilképed is.');
         setTimeout(() => {
             navigate('/login');
         }, 2000);
@@ -68,22 +69,40 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label>Felhasználónév</label>
-            <input type="text" name="username" onChange={handleChange} required />
+            <label>Felhasználónév *</label>
+            <input type="text" name="username" onChange={handleChange} required placeholder="Pl. KovacsBela" />
           </div>
 
           <div className="form-group">
-            <label>Email cím</label>
-            <input type="email" name="email" onChange={handleChange} required />
+            <label>Email cím *</label>
+            <input type="email" name="email" onChange={handleChange} required placeholder="bela@email.hu" />
+          </div>
+
+          {/* ÚJ MEZŐ: Profilkép URL */}
+          <div className="form-group">
+            <label>Profilkép URL (Opcionális)</label>
+            <div style={{position: 'relative'}}>
+              <input 
+                type="text" 
+                name="avatar_url" 
+                onChange={handleChange} 
+                placeholder="https://imgur.com/..." 
+                style={{paddingLeft: '40px', width: '100%', boxSizing: 'border-box'}} // Hely az ikonnak
+              />
+              <FaUserCircle style={{position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)'}}/>
+            </div>
+            <small style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>
+              Ha üresen hagyod, generálunk egyet a nevedből!
+            </small>
           </div>
 
           <div className="form-group">
-            <label>Jelszó</label>
+            <label>Jelszó *</label>
             <input type="password" name="password" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label>Jelszó megerősítése</label>
+            <label>Jelszó megerősítése *</label>
             <input type="password" name="confirmPassword" onChange={handleChange} required />
           </div>
 

@@ -1,83 +1,117 @@
-import { useState } from 'react';
-import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaLink } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import './Profile.css';
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null); // Itt tároljuk a belépett user adatait
   const [activeTab, setActiveTab] = useState('posts');
 
-  // DUMMY USER ADATOK
-  const user = {
-    name: "Fodor Zsombor",
-    username: "@zsombor_dev",
-    bio: "Full Stack fejlesztő. Szeretem a természetfotózást és a modern webes technológiákat. A kávé a motorom.",
-    location: "Budapest, Hungary",
-    website: "github.com/zsombor",
-    postsCount: 12,
-    followers: 145,
-    following: 30,
-    avatar: "https://ui-avatars.com/api/?name=Fodor+Zsombor&background=0D8ABC&color=fff&size=200"
+  // Amikor betölt az oldal, megnézzük, be van-e lépve valaki
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+
+    if (!storedUser || !token) {
+      // Ha nincs adat, irány a bejelentkezés!
+      navigate('/login');
+    } else {
+      // Ha van, elmentjük az állapotba
+      setUser(JSON.parse(storedUser));
+    }
+  }, [navigate]);
+
+  // KIJELENTKEZÉS FÜGGVÉNY
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Töröljük a kulcsot
+    localStorage.removeItem('user');  // Töröljük az adatokat
+    window.location.href = '/login';  // Újratöltjük az oldalt és átirányítunk
   };
 
-  // DUMMY KÉPEK
-  const myPosts = [
-    { id: 1, url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085', title: 'Coding Setup' },
-    { id: 2, url: 'https://images.unsplash.com/photo-1526772662000-3f88f107f5d8', title: 'Monitor' },
-    { id: 4, url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f', title: 'Retro Tech' },
-  ];
+  // Ha még tölti az adatokat, ne mutassunk semmit (vagy töltés ikont)
+  if (!user) return null;
 
-  const likedPosts = [
-    { id: 3, url: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d', title: 'Night City' },
-  ];
+  // DUMMY ADATOK A STATISZTIKÁHOZ (Mert ezeket még nem számolja a backend)
+  const stats = {
+    postsCount: 0, // Később ezt is lekérhetjük
+    followers: 0,
+    following: 0
+  };
 
   return (
     <div className="profile-container">
       
-      {/* 1. PROFIL KÁRTYA (Egyben a fejléc és az infók) */}
+      {/* 1. PROFIL KÁRTYA */}
       <div className="profile-card">
-        {/* Színes borítókép */}
-        <div className="cover-photo"></div>
+        <div className="cover-photo">
+          {/* Kijelentkezés gomb a jobb felső sarokban */}
+          <button 
+            onClick={handleLogout} 
+            style={{
+              position: 'absolute', top: '20px', right: '20px',
+              backgroundColor: 'rgba(0,0,0,0.6)', color: 'white',
+              border: 'none', padding: '8px 15px', borderRadius: '20px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
+            }}
+          >
+            <FaSignOutAlt /> Kijelentkezés
+          </button>
+        </div>
         
         <div className="profile-content">
-          {/* Profilkép (Negatív margóval felhúzva) */}
-          <img src={user.avatar} alt="Avatar" className="avatar" />
+          {/* Avatar: Ha van URL, azt mutatja, ha nincs, akkor egy ikont */}
+          {user.avatar_url && user.avatar_url.includes('http') ? (
+            <img src={user.avatar_url} alt="Avatar" className="avatar" />
+          ) : (
+            <div className="avatar" style={{display:'flex', justifyContent:'center', alignItems:'center', fontSize:'3rem', color:'var(--text-secondary)'}}>
+              <FaUserCircle />
+            </div>
+          )}
           
           <div className="profile-name-section">
-            <h1 className="profile-name">{user.name}</h1>
-            <p className="profile-username">{user.username}</p>
+            <h1 className="profile-name">{user.full_name || user.username}</h1>
+            <p className="profile-username">
+              @{user.username} 
+              {/* Ha ADMIN, mutassuk a jelvényt */}
+              {user.role === 'admin' && (
+                <span style={{ 
+                    backgroundColor: '#ff0055', color: 'white', padding: '2px 8px', 
+                    borderRadius: '10px', fontSize: '0.7rem', marginLeft: '10px', verticalAlign: 'middle' 
+                }}>ADMIN</span>
+              )}
+            </p>
           </div>
 
-          <p className="profile-bio">{user.bio}</p>
-
-          {/* Helyszín és Link (Opcionális extra infók) */}
+          <p className="profile-bio">{user.bio || "Még nincs bemutatkozás."}</p>
+          
           <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '15px' }}>
-            <span><FaMapMarkerAlt /> {user.location}</span>
-            <span><FaLink /> {user.website}</span>
+            <span><FaMapMarkerAlt /> {user.location || "Ismeretlen hely"}</span>
+            <span style={{color: 'var(--text-secondary)'}}>{user.email}</span>
           </div>
 
-          {/* Szerkesztés gomb */}
           <button className="edit-profile-btn">
             <FaUserEdit /> Profil szerkesztése
           </button>
 
-          {/* Statisztika */}
           <div className="profile-stats">
             <div className="stat-item">
-              <span className="stat-value">{user.postsCount}</span>
+              <span className="stat-value">{stats.postsCount}</span>
               <span className="stat-label">Poszt</span>
             </div>
             <div className="stat-item">
-              <span className="stat-value">{user.followers}</span>
+              <span className="stat-value">{stats.followers}</span>
               <span className="stat-label">Követő</span>
             </div>
             <div className="stat-item">
-              <span className="stat-value">{user.following}</span>
+              <span className="stat-value">{stats.following}</span>
               <span className="stat-label">Követés</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. TABOK (Váltás) */}
+      {/* 2. TABOK */}
       <div className="profile-tabs">
         <button 
           className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`}
@@ -93,35 +127,12 @@ const Profile = () => {
         </button>
       </div>
 
-      {/* 3. GALÉRIA GRID */}
+      {/* 3. GALÉRIA HELYE (Most még üres üzenet) */}
       <div className="gallery-grid">
-        {activeTab === 'posts' ? (
-          myPosts.length > 0 ? (
-            myPosts.map(post => (
-              <div key={post.id} className="gallery-item">
-                <img src={post.url} alt={post.title} />
-                <div className="overlay">
-                  <span className="img-title">{post.title}</span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="empty-state">Még nem töltöttél fel képet.</div>
-          )
-        ) : (
-          likedPosts.length > 0 ? (
-            likedPosts.map(post => (
-              <div key={post.id} className="gallery-item">
-                <img src={post.url} alt={post.title} />
-                <div className="overlay">
-                  <span className="img-title">Kedvelve <FaHeart /></span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="empty-state">Még nincs kedvenc képed.</div>
-          )
-        )}
+        <div className="empty-state">
+          Ide kerülnek majd a feltöltött képeid. <br/>
+          (Jelenleg fejlesztés alatt...)
+        </div>
       </div>
 
     </div>

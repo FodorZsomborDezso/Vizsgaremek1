@@ -56,29 +56,35 @@ app.get('/api/gallery', async (req, res) => {
 // 3. AUTH: REGISZTRÁCIÓ
 // ==========================
 app.post('/api/auth/register', async (req, res) => {
-    const { username, email, password } = req.body;
+    // Kivesszük az avatar_url-t is a kérésből
+    const { username, email, password, avatar_url } = req.body;
 
-    // 1. Validáció: Minden mező ki van töltve?
     if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Minden mező kitöltése kötelező!' });
+        return res.status(400).json({ error: 'Minden kötelező mező kitöltése szükséges!' });
     }
 
     try {
-        // 2. Megnézzük, létezik-e már ilyen user
         const [existing] = await db.query('SELECT * FROM users WHERE email = ? OR username = ?', [email, username]);
         if (existing.length > 0) {
             return res.status(400).json({ error: 'Ez a felhasználónév vagy email már foglalt!' });
         }
 
-        // 3. Jelszó titkosítása (Hash)
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // 4. Mentés az adatbázisba (Alapértelmezetten 'user' joggal)
-        const sql = 'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)';
-        await db.query(sql, [username, email, passwordHash, 'user']);
+        // --- ITT A LÉNYEG: ---
+        // Ha van megadva kép, használjuk azt.
+        // Ha NINCS (üres), akkor generálunk egyet a nevéből a ui-avatars.com segítségével.
+        const finalAvatar = avatar_url && avatar_url.trim() !== '' 
+            ? avatar_url 
+            : `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&size=128`;
 
-        res.status(201).json({ message: 'Sikeres regisztráció! Most már bejelentkezhetsz.' });
+        // Bővítettük az SQL-t az avatar_url mezővel
+        const sql = 'INSERT INTO users (username, email, password_hash, role, avatar_url) VALUES (?, ?, ?, ?, ?)';
+        
+        await db.query(sql, [username, email, passwordHash, 'user', finalAvatar]);
+
+        res.status(201).json({ message: 'Sikeres regisztráció!' });
 
     } catch (err) {
         console.error(err);
