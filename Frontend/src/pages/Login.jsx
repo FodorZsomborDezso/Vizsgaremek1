@@ -1,43 +1,46 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // useNavigate a továbbirányításhoz
+import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
   
-  // Állapotok a bemeneti mezőkhöz
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
 
-  // Ha írnak a mezőbe, frissítjük az állapotot
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Űrlap elküldése
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Hiba törlése
+    setError('');
 
-    // 1. Validáció (Tesztelői szempont!)
-    if (!formData.email || !formData.password) {
-      setError('Kérlek töltsd ki az összes mezőt!');
-      return;
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // SIKERES BELÉPÉS!
+        // Elmentjük az adatokat a böngészőbe
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Frissítjük az oldalt, hogy a Header észrevegye a változást
+        // (Később ezt elegánsabban, Context-tel oldjuk meg, de vizsgára ez a leggyorsabb)
+        window.location.href = '/profile'; 
+      } else {
+        setError(data.error || 'Hibás adatok.');
+      }
+
+    } catch (err) {
+      setError('Nem sikerült elérni a szervert.');
     }
-
-    // 2. Szimulált belépés (Később ide jön a Backend API hívás)
-    console.log('Login adatok:', formData);
-    
-    // Sikeres belépés imitálása:
-    alert('Sikeres bejelentkezés (Demo)');
-    navigate('/profile'); // Átirányítás a profilra
   };
 
   return (
@@ -50,24 +53,12 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label>Email cím</label>
-            <input 
-              type="email" 
-              name="email" 
-              placeholder="pelda@email.hu"
-              value={formData.email}
-              onChange={handleChange}
-            />
+            <input type="email" name="email" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Jelszó</label>
-            <input 
-              type="password" 
-              name="password" 
-              placeholder="******"
-              value={formData.password}
-              onChange={handleChange}
-            />
+            <input type="password" name="password" onChange={handleChange} required />
           </div>
 
           <button type="submit" className="auth-btn">Belépés</button>

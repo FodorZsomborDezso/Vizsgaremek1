@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import './Auth.css'; // Ugyanazt a CSS-t használjuk
+import './Auth.css';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -13,42 +13,49 @@ const Register = () => {
   });
 
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
-    // --- VALIDÁCIÓ (Vizsga szempontból kritikus!) ---
-    
-    // 1. Üres mezők ellenőrzése
-    if (!formData.username || !formData.email || !formData.password) {
-      setError('Minden mező kitöltése kötelező!');
-      return;
-    }
-
-    // 2. Jelszavak egyezése
+    // Validáció
     if (formData.password !== formData.confirmPassword) {
       setError('A két jelszó nem egyezik meg!');
       return;
     }
 
-    // 3. Jelszó hossza
-    if (formData.password.length < 6) {
-      setError('A jelszónak legalább 6 karakternek kell lennie!');
-      return;
-    }
+    try {
+      // POST kérés küldése a Backendnek
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        })
+      });
 
-    // --- Ha minden oké ---
-    console.log('Regisztrációs adatok:', formData);
-    alert('Sikeres regisztráció! Most jelentkezz be.');
-    navigate('/login');
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Sikeres regisztráció! Átirányítás a belépéshez...');
+        setTimeout(() => {
+            navigate('/login');
+        }, 2000);
+      } else {
+        setError(data.error || 'Hiba történt.');
+      }
+
+    } catch (err) {
+      setError('Nem sikerült elérni a szervert.');
+    }
   };
 
   return (
@@ -57,50 +64,27 @@ const Register = () => {
         <h2 className="auth-title">Csatlakozz</h2>
         
         {error && <div className="error-msg">{error}</div>}
+        {success && <div className="success-msg" style={{color: 'green', textAlign:'center', marginBottom:'10px'}}>{success}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label>Felhasználónév</label>
-            <input 
-              type="text" 
-              name="username" 
-              placeholder="pl. KisPista"
-              value={formData.username}
-              onChange={handleChange}
-            />
+            <input type="text" name="username" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Email cím</label>
-            <input 
-              type="email" 
-              name="email" 
-              placeholder="pelda@email.hu"
-              value={formData.email}
-              onChange={handleChange}
-            />
+            <input type="email" name="email" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Jelszó</label>
-            <input 
-              type="password" 
-              name="password" 
-              placeholder="******"
-              value={formData.password}
-              onChange={handleChange}
-            />
+            <input type="password" name="password" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
             <label>Jelszó megerősítése</label>
-            <input 
-              type="password" 
-              name="confirmPassword" 
-              placeholder="******"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-            />
+            <input type="password" name="confirmPassword" onChange={handleChange} required />
           </div>
 
           <button type="submit" className="auth-btn">Regisztráció</button>
