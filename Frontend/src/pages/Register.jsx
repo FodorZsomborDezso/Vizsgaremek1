@@ -1,24 +1,38 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUserCircle } from 'react-icons/fa'; // Ikon a profilkép mezőhöz
+import { FaCloudUploadAlt, FaUserCircle } from 'react-icons/fa';
 import './Auth.css';
 
 const Register = () => {
   const navigate = useNavigate();
 
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    avatar_url: '' // ÚJ MEZŐ
+    confirmPassword: ''
   });
+  
+  const [file, setFile] = useState(null); 
+  const [preview, setPreview] = useState(null); 
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      
+      setPreview(URL.createObjectURL(selectedFile));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -31,22 +45,29 @@ const Register = () => {
       return;
     }
 
+    
+    
+    const dataToSend = new FormData();
+    dataToSend.append('username', formData.username);
+    dataToSend.append('email', formData.email);
+    dataToSend.append('password', formData.password);
+    
+    if (file) {
+      
+      dataToSend.append('profileImage', file); 
+    }
+
     try {
+      
       const response = await fetch('http://localhost:3000/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          avatar_url: formData.avatar_url // Elküldjük ezt is!
-        })
+        body: dataToSend 
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Sikeres regisztráció! Most már van profilképed is.');
+        setSuccess('Sikeres regisztráció! Kép feltöltve.');
         setTimeout(() => {
             navigate('/login');
         }, 2000);
@@ -65,44 +86,52 @@ const Register = () => {
         <h2 className="auth-title">Csatlakozz</h2>
         
         {error && <div className="error-msg">{error}</div>}
-        {success && <div className="success-msg" style={{color: 'green', textAlign:'center', marginBottom:'10px'}}>{success}</div>}
+        {success && <div className="success-msg" style={{color: 'green', textAlign:'center'}}>{success}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label>Felhasználónév *</label>
-            <input type="text" name="username" onChange={handleChange} required placeholder="Pl. KovacsBela" />
+            <label>Felhasználónév</label>
+            <input type="text" name="username" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label>Email cím *</label>
-            <input type="email" name="email" onChange={handleChange} required placeholder="bela@email.hu" />
+            <label>Email cím</label>
+            <input type="email" name="email" onChange={handleChange} required />
           </div>
 
-          {/* ÚJ MEZŐ: Profilkép URL */}
           <div className="form-group">
-            <label>Profilkép URL (Opcionális)</label>
-            <div style={{position: 'relative'}}>
-              <input 
-                type="text" 
-                name="avatar_url" 
-                onChange={handleChange} 
-                placeholder="https://imgur.com/..." 
-                style={{paddingLeft: '40px', width: '100%', boxSizing: 'border-box'}} // Hely az ikonnak
-              />
-              <FaUserCircle style={{position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)'}}/>
+            <label>Profilkép (Opcionális)</label>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '5px' }}>
+              
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
+                {preview ? (
+                  <img src={preview} alt="Előnézet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <FaUserCircle style={{ fontSize: '2.5rem', color: 'var(--text-secondary)' }} />
+                )}
+              </div>
+
+              <label style={{ cursor: 'pointer', color: 'var(--accent-color)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <FaCloudUploadAlt /> Kép kiválasztása
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                  style={{ display: 'none' }} 
+                />
+              </label>
             </div>
-            <small style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>
-              Ha üresen hagyod, generálunk egyet a nevedből!
-            </small>
           </div>
 
+
           <div className="form-group">
-            <label>Jelszó *</label>
+            <label>Jelszó</label>
             <input type="password" name="password" onChange={handleChange} required />
           </div>
 
           <div className="form-group">
-            <label>Jelszó megerősítése *</label>
+            <label>Jelszó megerősítése</label>
             <input type="password" name="confirmPassword" onChange={handleChange} required />
           </div>
 
