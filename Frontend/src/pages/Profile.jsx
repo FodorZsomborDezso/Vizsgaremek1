@@ -5,38 +5,56 @@ import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null); // Itt tároljuk a belépett user adatait
-  const [activeTab, setActiveTab] = useState('posts');
+  const [user, setUser] = useState(null); // A belépett user adatai
+  const [myPosts, setMyPosts] = useState([]); // A user saját posztjai (Backendről)
+  const [activeTab, setActiveTab] = useState('posts'); // Melyik fül aktív?
 
-  // Amikor betölt az oldal, megnézzük, be van-e lépve valaki
+  // 1. BEJELENTKEZÉS ELLENŐRZÉSE ÉS POSZTOK LEKÉRÉSE
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
+    // Ha nincs bejelentkezve, irány a Login oldal
     if (!storedUser || !token) {
-      // Ha nincs adat, irány a bejelentkezés!
       navigate('/login');
-    } else {
-      // Ha van, elmentjük az állapotba
-      setUser(JSON.parse(storedUser));
+      return;
     }
+
+    // Ha be van lépve, elmentjük a usert
+    setUser(JSON.parse(storedUser));
+
+    // LEKÉRJÜK A SAJÁT POSZTOKAT A BACKENDRŐL
+    fetch('http://localhost:3000/api/my-posts', {
+      headers: {
+        'Authorization': `Bearer ${token}` // FONTOS: Küldjük a tokent!
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      // Ha tömböt kaptunk, beállítjuk (ha hiba van, üres marad)
+      if (Array.isArray(data)) {
+        setMyPosts(data);
+      }
+    })
+    .catch(err => console.error("Hiba a posztok lekérésekor:", err));
+
   }, [navigate]);
 
-  // KIJELENTKEZÉS FÜGGVÉNY
+  // 2. KIJELENTKEZÉS FÜGGVÉNY
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Töröljük a kulcsot
-    localStorage.removeItem('user');  // Töröljük az adatokat
-    window.location.href = '/login';  // Újratöltjük az oldalt és átirányítunk
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login'; // Teljes újratöltés a tisztább állapotért
   };
 
-  // Ha még tölti az adatokat, ne mutassunk semmit (vagy töltés ikont)
-  if (!user) return null;
+  // Amíg töltünk, ne mutassunk hibás UI-t
+  if (!user) return <div style={{textAlign:'center', marginTop:'50px'}}>Betöltés...</div>;
 
-  // DUMMY ADATOK A STATISZTIKÁHOZ (Mert ezeket még nem számolja a backend)
+  // Statisztika számítása a valós adatokból
   const stats = {
-    postsCount: 0, // Később ezt is lekérhetjük
-    followers: 0,
-    following: 0
+    postsCount: myPosts.length, // Valós posztok száma
+    followers: 0, // Ez még dummy
+    following: 0  // Ez még dummy
   };
 
   return (
@@ -45,7 +63,7 @@ const Profile = () => {
       {/* 1. PROFIL KÁRTYA */}
       <div className="profile-card">
         <div className="cover-photo">
-          {/* Kijelentkezés gomb a jobb felső sarokban */}
+          {/* Kijelentkezés gomb */}
           <button 
             onClick={handleLogout} 
             style={{
@@ -60,11 +78,11 @@ const Profile = () => {
         </div>
         
         <div className="profile-content">
-          {/* Avatar: Ha van URL, azt mutatja, ha nincs, akkor egy ikont */}
+          {/* Avatar kezelés: Ha van URL, azt mutatjuk, ha nincs, ikont */}
           {user.avatar_url && user.avatar_url.includes('http') ? (
             <img src={user.avatar_url} alt="Avatar" className="avatar" />
           ) : (
-            <div className="avatar" style={{display:'flex', justifyContent:'center', alignItems:'center', fontSize:'3rem', color:'var(--text-secondary)'}}>
+            <div className="avatar" style={{display:'flex', justifyContent:'center', alignItems:'center', fontSize:'3rem', color:'var(--text-secondary)', background: 'var(--bg-secondary)'}}>
               <FaUserCircle />
             </div>
           )}
@@ -73,21 +91,17 @@ const Profile = () => {
             <h1 className="profile-name">{user.full_name || user.username}</h1>
             <p className="profile-username">
               @{user.username} 
-              {/* Ha ADMIN, mutassuk a jelvényt */}
               {user.role === 'admin' && (
-                <span style={{ 
-                    backgroundColor: '#ff0055', color: 'white', padding: '2px 8px', 
-                    borderRadius: '10px', fontSize: '0.7rem', marginLeft: '10px', verticalAlign: 'middle' 
-                }}>ADMIN</span>
+                <span style={{ backgroundColor: '#ff0055', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', marginLeft: '10px', verticalAlign: 'middle' }}>ADMIN</span>
               )}
             </p>
           </div>
 
-          <p className="profile-bio">{user.bio || "Még nincs bemutatkozás."}</p>
+          <p className="profile-bio">{user.bio || "Üdvözöllek a profilomon!"}</p>
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '15px' }}>
-            <span><FaMapMarkerAlt /> {user.location || "Ismeretlen hely"}</span>
-            <span style={{color: 'var(--text-secondary)'}}>{user.email}</span>
+            <span><FaMapMarkerAlt /> {user.location || "Magyarország"}</span>
+            <span>{user.email}</span>
           </div>
 
           <button className="edit-profile-btn">
@@ -111,7 +125,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* 2. TABOK */}
+      {/* 2. TABOK (Fülek) */}
       <div className="profile-tabs">
         <button 
           className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`}
@@ -127,12 +141,26 @@ const Profile = () => {
         </button>
       </div>
 
-      {/* 3. GALÉRIA HELYE (Most még üres üzenet) */}
+      {/* 3. GALÉRIA RÁCS */}
       <div className="gallery-grid">
-        <div className="empty-state">
-          Ide kerülnek majd a feltöltött képeid. <br/>
-          (Jelenleg fejlesztés alatt...)
-        </div>
+        {activeTab === 'posts' ? (
+          // SAJÁT POSZTOK LISTÁZÁSA
+          myPosts.length > 0 ? (
+            myPosts.map(post => (
+              <div key={post.id} className="gallery-item">
+                <img src={post.image_url} alt={post.title} loading="lazy" />
+                <div className="overlay">
+                  <span className="img-title">{post.title}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">Még nem töltöttél fel képet.</div>
+          )
+        ) : (
+          // KEDVELÉSEK (Ez még statikus/fejlesztés alatt)
+          <div className="empty-state">A kedvelések funkció hamarosan érkezik!</div>
+        )}
       </div>
 
     </div>

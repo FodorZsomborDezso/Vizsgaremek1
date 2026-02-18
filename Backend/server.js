@@ -22,6 +22,26 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 
+
+// BIZTONSÁGI MW: Token ellenőrzése
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    // A token formátuma: "Bearer <HOSSZÚ_TOKEN_SZÖVEG>"
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Nincs bejelentkezve!' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Érvénytelen token!' });
+        
+        // Ha minden oké, elmentjük a user adatait a kérésbe, 
+        // így a következő lépésben tudni fogjuk, ki ő.
+        req.user = user;
+        next(); // Mehet tovább a kérés
+    });
+}
+
+
 app.get('/api/ideas', async (req, res) => {
     try {
         
@@ -165,6 +185,106 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+app.post('/api/posts', authenticateToken, upload.single('image'), async (req, res) => {
+    // 1. Megnézzük, mit kapott a szerver (DEBUG)
+    console.log("--- FELTÖLTÉS DEBUG ---");
+    console.log("Body adatok:", req.body);
+    console.log("Fájl:", req.file ? "Van fájl" : "Nincs fájl");
+
+    const { title, description, category_id, idea_id } = req.body;
+
+    if (!title || !req.file) {
+        return res.status(400).json({ error: 'Cím és Kép megadása kötelező!' });
+    }
+
+    try {
+        // 2. Kép feldolgozása (Sharp)
+        const filename = `post-${Date.now()}.jpeg`;
+        await sharp(req.file.buffer)
+            .resize(1200, 800, { fit: sharp.fit.inside, withoutEnlargement: true })
+            .toFormat('jpeg')
+            .jpeg({ quality: 85 })
+            .toFile(`uploads/${filename}`);
+
+        const imageUrl = `http://localhost:3000/uploads/${filename}`;
+
+        // 3. idea_id kezelése: Ha üres vagy "null" szöveg, akkor legyen SQL NULL, különben Szám
+        let finalIdeaId = null;
+        if (idea_id && idea_id !== 'null' && idea_id !== '') {
+            finalIdeaId = parseInt(idea_id); // Számmá alakítjuk
+        }
+
+        // 4. Mentés az adatbázisba
+        const sql = `
+            INSERT INTO posts (user_id, category_id, idea_id, title, description, image_url) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+
+        // user_id a tokenből jön (req.user.id)
+        // category_id alapból 1, ha nincs megadva
+        await db.query(sql, [req.user.id, category_id || 1, finalIdeaId, title, description, imageUrl]);
+
+        console.log("SIKER: Poszt elmentve az adatbázisba.");
+        res.status(201).json({ message: 'Poszt sikeresen létrehozva!' });
+
+    } catch (err) {
+        // ITT ÍRJUK KI A PONTOS HIBÁT A TERMINÁLBA!
+        console.error("❌ SQL HIBA:", err.message); // Ezt figyeld a terminálban!
+        
+        // Ha Foreign Key hiba van (nem létező ötlet ID)
+        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+             return res.status(400).json({ error: `Nincs ilyen azonosítójú ötlet (ID: ${idea_id}) az adatbázisban!` });
+        }
+
+        res.status(500).json({ error: 'Adatbázis hiba történt.' });
+    }
+});
+
+// ... (Helyezd el a többi route közé)
+
+// 6. SAJÁT POSZTOK LEKÉRDEZÉSE (Profilhoz)
+app.get('/api/my-posts', authenticateToken, async (req, res) => {
+    try {
+        const sql = `
+            SELECT * FROM posts 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        `;
+        // A req.user.id a tokenből jön
+        const [rows] = await db.query(sql, [req.user.id]);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a posztok lekérdezésekor' });
+    }
+});
+
+// ==========================
+// 7. ÚJ ÖTLET LÉTREHOZÁSA
+// ==========================
+app.post('/api/ideas', authenticateToken, async (req, res) => {
+    const { title, description, category_id } = req.body;
+
+    // Validáció
+    if (!title || !description || !category_id) {
+        return res.status(400).json({ error: 'Minden mező kitöltése kötelező!' });
+    }
+
+    try {
+        const sql = `
+            INSERT INTO ideas (user_id, category_id, title, description) 
+            VALUES (?, ?, ?, ?)
+        `;
+        // req.user.id a tokenből jön (authenticateToken middleware)
+        await db.query(sql, [req.user.id, category_id, title, description]);
+
+        res.status(201).json({ message: 'Ötlet sikeresen közzétéve!' });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba az ötlet mentésekor.' });
+    }
+});
 
 // Szerver indítása
 app.listen(PORT, () => {
