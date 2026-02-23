@@ -175,3 +175,33 @@
   color: var(--text-secondary);
   font-style: italic;
 }
+/* --- TÖRLÉS GOMB A GALÉRIÁBAN --- */
+.delete-post-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: rgba(220, 53, 69, 0.8); /* Pirosas háttér */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 0; /* Alapból rejtve van */
+  font-size: 1rem;
+}
+
+/* Csak akkor jelenik meg, ha az egeret a kártyára húzzuk */
+.gallery-item:hover .delete-post-btn {
+  opacity: 1;
+}
+
+.delete-post-btn:hover {
+  background-color: rgb(220, 53, 69);
+  transform: scale(1.15) rotate(5deg); /* Kicsit megnő és megdől */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}

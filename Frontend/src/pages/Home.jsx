@@ -1,95 +1,70 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// IMPORTÁLJUK AZ IKONOKAT
-import { FaCameraRetro, FaHeart, FaUserEdit, FaArrowRight } from 'react-icons/fa'; 
-import './Home.css';
+import { FaArrowRight, FaPaintBrush } from 'react-icons/fa';
+import './Home.css'; // Használjuk a meglévő stílusodat
 
 const Home = () => {
-  // IDEIGLENES ADATOK (Dummy Data)
-  const trendingImages = [
-    { id: 1, url: 'https://images.unsplash.com/photo-1554080353-a576cf803bda?auto=format&fit=crop&w=400&q=80', title: 'Portréfotózás', user: 'Zsombor' },
-    { id: 2, url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=400&q=80', title: 'Neon Város', user: 'Ákos' },
-    { id: 3, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80', title: 'Absztrakt', user: 'DesignPro' },
-    { id: 4, url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=400&q=80', title: 'Természet', user: 'NatureLover' },
-  ];
+  const [latestPosts, setLatestPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Legújabb posztok lekérése betöltéskor
+  useEffect(() => {
+    fetch('http://localhost:3000/api/latest-posts')
+      .then(res => res.json())
+      .then(data => {
+        setLatestPosts(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Hiba a kiemelt képek betöltésekor:", err);
+        setLoading(false);
+      });
+  }, []);
 
   return (
-    <div className="home-wrapper">
+    <div className="home-container">
       
-      {/* 1. HERO SZEKCIÓ */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1>Oszd meg a <span className="highlight-text">világodat</span></h1>
-          <p>
-            A Vizsgaremek egy interaktív galéria és közösségi platform. 
-            Töltsd fel alkotásaidat, inspirálódj mások munkáiból és légy része a kreatív közösségnek.
-          </p>
-          <div className="hero-buttons">
-            <Link to="./register" className="btn btn-primary">Csatlakozom</Link>
-            <Link to="./gallery" className="btn btn-outline">Galéria Böngészése</Link>
-          </div>
+      {/* HERO SZEKCIÓ (Ez a nagy üdvözlő rész felül) */}
+      <section className="hero-section" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <h1 style={{ fontSize: '3rem', marginBottom: '20px', color: 'var(--text-primary)' }}>
+          Üdvözöl az <span style={{ color: 'var(--accent-color)' }}>ArtisticEye</span>
+        </h1>
+        <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto 30px' }}>
+          A hely, ahol az ötletek vizuális formát öltenek. Oszd meg az elképzeléseid, vagy valósítsd meg mások álmát!
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
+          <Link to="/gallery" className="auth-btn" style={{ textDecoration: 'none', padding: '12px 25px' }}>
+            Felfedezés <FaArrowRight />
+          </Link>
+          <Link to="/ideas" className="auth-btn" style={{ textDecoration: 'none', padding: '12px 25px', backgroundColor: 'transparent', border: '2px solid var(--accent-color)', color: 'var(--text-primary)' }}>
+            Ötletbörze
+          </Link>
         </div>
       </section>
 
-      {/* 2. FEATURE KÁRTYÁK (IKONOKKAL) */}
-      <section className="features-section">
-        <h2>Fedezd fel a lehetőségeket</h2>
-        <div className="features-grid">
-          
-          <div className="feature-card">
-            {/* Emoji helyett ikon komponens */}
-            <div className="icon-container">
-                <FaCameraRetro className="feature-icon" />
-            </div>
-            <h3>Oszd meg</h3>
-            <p>Töltsd fel legjobb fotóidat és illusztrációidat egyszerűen.</p>
-            <Link to="/upload" className="text-link">Feltöltés indítása <FaArrowRight style={{marginLeft: '5px'}} /></Link>
-          </div>
+      {/* DINAMIKUS KIEMELT ALKOTÁSOK SZEKCIÓ */}
+      <section className="featured-section" style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '30px', color: 'var(--text-primary)' }}>
+          <FaPaintBrush style={{ marginRight: '10px', color: 'var(--accent-color)' }} /> 
+          Legújabb Alkotások
+        </h2>
 
-          <div className="feature-card">
-            <div className="icon-container">
-                <FaHeart className="feature-icon" />
-            </div>
-            <h3>Közösség</h3>
-            <p>Lájkolj, kommentelj és kövesd a kedvenc alkotóidat.</p>
-            <Link to="/community" className="text-link">Közösség megtekintése <FaArrowRight style={{marginLeft: '5px'}} /></Link>
-          </div>
-
-          <div className="feature-card">
-            <div className="icon-container">
-                <FaUserEdit className="feature-icon" />
-            </div>
-            <h3>Profilépítés</h3>
-            <p>Szerkeszd profilodat és építsd fel a saját portfóliódat.</p>
-            <Link to="/profile" className="text-link">Profilom kezelése <FaArrowRight style={{marginLeft: '5px'}} /></Link>
-          </div>
-
-        </div>
-      </section>
-
-      {/* 3. TRENDING GALÉRIA */}
-      <section className="trending-section">
-        <div className="section-header">
-          <h2>Népszerű a héten</h2>
-          <p>A közösség által legjobbra értékelt alkotások</p>
-        </div>
-        
-        <div className="gallery-grid">
-          {trendingImages.map((img) => (
-            <div key={img.id} className="gallery-item">
-              <img src={img.url} alt={img.title} />
-              <div className="overlay">
-                <span className="img-title">{img.title}</span>
-                <span className="img-user">@{img.user}</span>
+        {loading ? (
+          <p style={{ textAlign: 'center' }}>Képek betöltése...</p>
+        ) : (
+          <div className="gallery-grid">
+            {latestPosts.map(post => (
+              <div key={post.id} className="gallery-item">
+                <img src={post.image_url} alt={post.title} loading="lazy" />
+                <div className="overlay">
+                  <span className="img-title">{post.title}</span>
+                  <span className="img-user">@{post.username}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="center-btn">
-          <Link to="/gallery" className="btn btn-secondary">Összes kép megtekintése</Link>
-        </div>
+            ))}
+          </div>
+        )}
       </section>
-
     </div>
   );
 };

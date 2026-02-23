@@ -60,18 +60,19 @@ app.get('/api/ideas', async (req, res) => {
     }
 });
 
-
-// 2. VÉGPONT: Galéria képek lekérdezése
+// 2. VÉGPONT: Galéria képek lekérdezése (Lájk számlálóval)
 app.get('/api/gallery', async (req, res) => {
     try {
-        // Lekérjük a posztokat, a felhasználó nevével együtt
-        // FONTOS: Csak azokat, amik NEM válaszok ötletekre (idea_id IS NULL)
+        // A COUNT(likes.user_id) összeszámolja, hányan lájkolták
         const sql = `
-            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name
+            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name,
+                   COUNT(likes.user_id) AS like_count
             FROM posts
             JOIN users ON posts.user_id = users.id
             JOIN categories ON posts.category_id = categories.id
+            LEFT JOIN likes ON posts.id = likes.post_id
             WHERE posts.idea_id IS NULL
+            GROUP BY posts.id
             ORDER BY posts.created_at DESC
         `;
         const [rows] = await db.query(sql);
@@ -283,6 +284,157 @@ app.post('/api/ideas', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Hiba az ötlet mentésekor.' });
+    }
+});
+
+// ==========================
+// 8. FŐOLDAL: Legújabb 3 poszt (Kiemelt alkotások)
+// ==========================
+app.get('/api/latest-posts', async (req, res) => {
+    try {
+        const sql = `
+            SELECT posts.*, users.username, users.avatar_url 
+            FROM posts 
+            JOIN users ON posts.user_id = users.id 
+            WHERE posts.idea_id IS NULL -- Csak a sima galéria képeket mutatjuk
+            ORDER BY posts.created_at DESC 
+            LIMIT 3
+        `;
+        const [rows] = await db.query(sql);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a legújabb posztok lekérésekor.' });
+    }
+});
+
+// ==========================
+// 9. LÁJKOLÁS: A saját lájkok lekérése
+// ==========================
+app.get('/api/my-likes', authenticateToken, async (req, res) => {
+    try {
+        // Visszaadjuk azoknak a posztoknak az ID-ját, amiket a user lájkolt
+        const [rows] = await db.query('SELECT post_id FROM likes WHERE user_id = ?', [req.user.id]);
+        // Csak egy sima tömböt csinálunk a számokból: [1, 4, 5]
+        const likedIds = rows.map(r => r.post_id); 
+        res.json(likedIds);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a lájkok lekérésekor.' });
+    }
+});
+
+// ==========================
+// 10. LÁJKOLÁS: Kapcsoló (Like/Unlike)
+// ==========================
+app.post('/api/posts/:id/like', authenticateToken, async (req, res) => {
+    const postId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        // Megnézzük, lájkolta-e már
+        const [existing] = await db.query('SELECT * FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId]);
+
+        if (existing.length > 0) {
+            // HA MÁR LÁJKOLTA -> Töröljük (Unlike)
+            await db.query('DELETE FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId]);
+            res.json({ liked: false });
+        } else {
+            // HA MÉG NEM LÁJKOLTA -> Hozzáadjuk (Like)
+            await db.query('INSERT INTO likes (user_id, post_id) VALUES (?, ?)', [userId, postId]);
+            res.json({ liked: true });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a lájkolás során.' });
+    }
+});
+
+// ==========================
+// 11. KOMMENTEK LEKÉRÉSE EGY POSZTHOZ
+// ==========================
+app.get('/api/posts/:id/comments', async (req, res) => {
+    try {
+        const sql = `
+            SELECT comments.*, users.username, users.avatar_url 
+            FROM comments 
+            JOIN users ON comments.user_id = users.id 
+            WHERE comments.post_id = ? 
+            ORDER BY comments.created_at ASC
+        `;
+        const [rows] = await db.query(sql, [req.params.id]);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a kommentek betöltésekor' });
+    }
+});
+
+// ==========================
+// 12. ÚJ KOMMENT ÍRÁSA
+// ==========================
+app.post('/api/posts/:id/comments', authenticateToken, async (req, res) => {
+    const { content } = req.body;
+    
+    if (!content || content.trim() === '') {
+        return res.status(400).json({ error: 'A komment nem lehet üres!' });
+    }
+
+    try {
+        const sql = 'INSERT INTO comments (user_id, post_id, content) VALUES (?, ?, ?)';
+        await db.query(sql, [req.user.id, req.params.id, content]);
+        
+        res.status(201).json({ message: 'Komment sikeresen elküldve!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a komment mentésekor.' });
+    }
+});
+
+// ==========================
+// 13. A LÁJKOLT POSZTOK TELJES ADATAI (A Profilhoz)
+// ==========================
+app.get('/api/my-liked-posts', authenticateToken, async (req, res) => {
+    try {
+        // Összekapcsoljuk a posztokat a lájkokkal, és leszűrjük a bejelentkezett felhasználóra
+        const sql = `
+            SELECT posts.*, users.username, users.avatar_url 
+            FROM posts
+            JOIN likes ON posts.id = likes.post_id
+            JOIN users ON posts.user_id = users.id
+            WHERE likes.user_id = ?
+            ORDER BY likes.created_at DESC
+        `;
+        const [rows] = await db.query(sql, [req.user.id]);
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a kedvelt posztok lekérésekor.' });
+    }
+});
+
+// ==========================
+// 14. POSZT TÖRLÉSE (Csak a sajátját törölheti!)
+// ==========================
+app.delete('/api/posts/:id', authenticateToken, async (req, res) => {
+    const postId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        // 1. Megnézzük, létezik-e a poszt, és tényleg azé-e, aki törölni akarja
+        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [postId, userId]);
+
+        if (post.length === 0) {
+            return res.status(403).json({ error: 'Nincs jogosultságod a törléshez, vagy a poszt nem létezik!' });
+        }
+
+        // 2. Ha minden OK, töröljük az adatbázisból
+        await db.query('DELETE FROM posts WHERE id = ?', [postId]);
+
+        res.json({ message: 'Poszt sikeresen törölve!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a törlés során.' });
     }
 });
 
