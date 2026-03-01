@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaCloudUploadAlt } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import './Auth.css';
 
 const Register = () => {
@@ -36,7 +37,7 @@ const Register = () => {
     e.preventDefault();
 
     if (password !== passwordConfirm) {
-      return alert("A jelszavak nem egyeznek!");
+      return toast.warning("A jelszavak nem egyeznek!");
     }
 
     setLoading(true);
@@ -63,14 +64,14 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Sikeres regisztráció! Most már bejelentkezhetsz.");
+        toast.success("Sikeres regisztráció! Most már bejelentkezhetsz.");
         navigate('/login');
       } else {
-        alert(data.error || "Hiba a regisztráció során!");
+        toast.error(data.error || "Hiba a regisztráció során!");
       }
     } catch (error) {
       console.error(error);
-      alert("Szerver hiba történt.");
+      toast.error("Szerver hiba történt.");
     } finally {
       setLoading(false);
     }

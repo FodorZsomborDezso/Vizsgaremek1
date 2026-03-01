@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaUserPlus, FaUserCheck, FaMapMarkerAlt, FaUserCircle, FaEnvelope } from 'react-icons/fa';
 import './Profile.css';
+import { toast } from 'react-toastify';
 
 const PublicProfile = () => {
   const { username } = useParams(); 
@@ -60,7 +61,7 @@ const PublicProfile = () => {
   const handleFollowToggle = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert("Be kell jelentkezned a követéshez!");
+      toast.info("Be kell jelentkezned a követéshez!");
       return;
     }
 

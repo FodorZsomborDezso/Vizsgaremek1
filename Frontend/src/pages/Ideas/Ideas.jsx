@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaLightbulb, FaPenFancy, FaPalette, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './Ideas.css';
+import { toast } from 'react-toastify';
 
 const Ideas = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const Ideas = () => {
     const token = localStorage.getItem('token');
     
     if (!token) {
-      alert("Kérlek jelentkezz be az ötletíráshoz!");
+      toast.info("Kérlek jelentkezz be az ötletíráshoz!");
       navigate('/login');
       return;
     }
@@ -61,17 +62,17 @@ const Ideas = () => {
       });
 
       if (response.ok) {
-        alert("Ötlet sikeresen közzétéve!");
+        toast.success("Ötlet sikeresen közzétéve!");
         setShowModal(false); // Bezárjuk az ablakot
         setNewIdea({ title: '', description: '', category_id: '1' }); // Töröljük az űrlapot
         fetchIdeas(); // Újratöltjük a listát, hogy látszódjon az új elem!
       } else {
-        alert("Hiba történt a mentéskor.");
+        toast.error("Hiba történt a mentéskor.");
       }
 
     } catch (error) {
       console.error(error);
-      alert("Nem sikerült elérni a szervert.");
+      toast.error("Nem sikerült elérni a szervert.");
     }
   };
 

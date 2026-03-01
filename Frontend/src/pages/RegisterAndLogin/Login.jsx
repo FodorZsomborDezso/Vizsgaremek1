@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import './Auth.css';
 
 const Login = () => {
@@ -26,13 +27,9 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // SIKERES BELÉPÉS!
-        // Elmentjük az adatokat a böngészőbe
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Frissítjük az oldalt, hogy a Header észrevegye a változást
-        // (Később ezt elegánsabban, Context-tel oldjuk meg, de vizsgára ez a leggyorsabb)
         window.location.href = '/profile'; 
       } else {
         setError(data.error || 'Hibás adatok.');

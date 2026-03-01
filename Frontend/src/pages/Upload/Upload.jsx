@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCloudUploadAlt, FaImage } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import './Upload.css'; // Használhatod a meglévő CSS-edet, ha van
 
 const Upload = () => {
@@ -27,7 +28,7 @@ const Upload = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('A feltöltéshez be kell jelentkezned!');
+      toast.info('A feltöltéshez be kell jelentkezned!');
       navigate('/login');
     }
   }, [navigate]);
@@ -47,7 +48,7 @@ const Upload = () => {
     e.preventDefault();
 
     if (!title || !file) {
-      alert("Cím és kép megadása kötelező!");
+      toast.warning("Cím és kép megadása kötelező!");
       return;
     }
 
@@ -76,15 +77,15 @@ const Upload = () => {
       });
 
       if (response.ok) {
-        alert("Kép sikeresen feltöltve!");
+        toast.success("Kép sikeresen feltöltve!");
         navigate('/gallery'); // Feltöltés után átvisszük a galériába
       } else {
         const data = await response.json();
-        alert(data.error || "Hiba a feltöltéskor.");
+        toast.error(data.error || "Hiba a feltöltéskor.");
       }
     } catch (error) {
       console.error("Hiba:", error);
-      alert("Nem sikerült kapcsolódni a szerverhez.");
+      toast.error("Nem sikerült kapcsolódni a szerverhez.");
     } finally {
       setLoading(false);
     }

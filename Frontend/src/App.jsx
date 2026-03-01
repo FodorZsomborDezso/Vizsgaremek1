@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
+
 import Home from './pages/Home/Home';
-import Gallery from './pages/Gallery/Gallery'; // <--- ÚJ
+import Gallery from './pages/Gallery/Gallery';
 import Chat from './pages/Chat/Chat';
-import Upload from './pages/Upload/Upload';   // <--- ÚJ
-import Ideas from './pages/Ideas/Ideas'; // <--- ÚJ IMPORT
+import Upload from './pages/Upload/Upload';
+import Ideas from './pages/Ideas/Ideas';
 import Admin from './pages/Admin/Admin';
-import PublicProfile from './pages/Profile/PublicProfile'; // Tedd be felülre
+import PublicProfile from './pages/Profile/PublicProfile';
 
-
-// Importáljuk a többi oldalt is (LÉTEZNIE KELL A FÁJLNAK!)
 import Login from './pages/RegisterAndLogin/Login';
 import Register from './pages/RegisterAndLogin/Register';
 import Profile from './pages/Profile/Profile';
@@ -33,6 +35,8 @@ function App() {
   return (
     <div className="app-container">
       <Header theme={theme} toggleTheme={toggleTheme} />
+
+      <ToastContainer position="bottom-right" autoClose={3000} theme="dark" />
       
       <main className="main-content">
         <Routes>

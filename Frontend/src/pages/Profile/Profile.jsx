@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, FaUserCircle, FaTrash, FaTimes, FaCloudUploadAlt } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import './Profile.css';
 
 const Profile = () => {
@@ -96,11 +97,11 @@ const Profile = () => {
         
         setIsEditModalOpen(false); 
       } else {
-        alert("Hiba történt a frissítéskor.");
+        toast.error("Hiba történt a frissítéskor.");
       }
     } catch (error) {
       console.error(error);
-      alert("Szerver hiba.");
+      toast.error("Szerver hiba.");
     } finally {
       setIsUpdating(false);
     }

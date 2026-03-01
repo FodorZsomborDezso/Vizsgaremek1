@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom'; // <--- ÚJ IMPORT A LINKHEZ!
 import { FaSearch, FaHeart, FaComment, FaTimes } from 'react-icons/fa';
 import './Gallery.css';
+import { toast } from 'react-toastify';
 
 const Gallery = () => {
   const [posts, setPosts] = useState([]); 
@@ -55,7 +56,7 @@ const Gallery = () => {
   const handleLike = async (e, postId) => {
     e.stopPropagation(); 
     const token = localStorage.getItem('token');
-    if (!token) return alert("Kérlek, jelentkezz be a kedveléshez!");
+    if (!token) return toast.info("Kérlek, jelentkezz be a kedveléshez!");
 
     try {
       const response = await fetch(`http://localhost:3000/api/posts/${postId}/like`, {
@@ -79,7 +80,7 @@ const Gallery = () => {
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    if (!token) return alert("Kérlek, jelentkezz be a kommenteléshez!");
+    if (!token) return toast.info("Kérlek, jelentkezz be a kommenteléshez!");
 
     try {
       const response = await fetch(`http://localhost:3000/api/posts/${selectedImage.id}/comments`, {
@@ -99,7 +100,7 @@ const Gallery = () => {
   // --- JELENTÉS BEKÜLDÉSE ---
   const handleReport = async (type, id) => {
     const token = localStorage.getItem('token');
-    if (!token) return alert("A jelentéshez be kell jelentkezned!");
+    if (!token) return toast.info("A jelentéshez be kell jelentkezned!");
 
     const reason = window.prompt("Kérlek indokold meg a jelentést (pl. spam, sértő tartalom):");
     if (!reason || reason.trim() === '') return;
@@ -110,7 +111,7 @@ const Gallery = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ target_type: type, target_id: id, reason })
       });
-      if (response.ok) alert("Köszönjük! A jelentést továbbítottuk az adminisztrátoroknak.");
+      if (response.ok) toast.success("Köszönjük! A jelentést továbbítottuk az adminisztrátoroknak.");
     } catch (error) { console.error(error); }
   };
 
