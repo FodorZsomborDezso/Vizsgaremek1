@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { 
   FaEye, FaSun, FaMoon, 
   FaLightbulb, FaImages, FaUpload, 
-  FaHome, FaUserCircle 
+  FaHome, FaUserCircle, FaShieldAlt // <--- 1. ÚJ IKON IMPORTÁLVA
 } from 'react-icons/fa';
 import './Header.css';
 
@@ -71,7 +71,23 @@ const Header = ({ theme, toggleTheme }) => {
               </li>
             )}
 
-            {/* 3. TÉMA VÁLTÓ (Mindenki látja) */}
+            {/* ========================================= */}
+            {/* 🔥 3. ADMIN MENÜ (CSAK ADMINOKNAK) 🔥   */}
+            {/* ========================================= */}
+            {user && user.role === 'admin' && (
+              <li className="nav-item">
+                <Link 
+                  to="/admin" 
+                  className="nav-link" 
+                  onClick={closeMobileMenu}
+                  style={{ color: '#ffcc00', fontWeight: 'bold' }} // Kiemeljük sárgával
+                >
+                  <FaShieldAlt style={{marginRight:'5px'}}/> Admin
+                </Link>
+              </li>
+            )}
+
+            {/* 4. TÉMA VÁLTÓ (Mindenki látja) */}
             <li className="nav-item theme-toggle-item">
               <button onClick={toggleTheme} className="theme-toggle-btn" aria-label="Témaváltás">
                 {theme === 'dark' ? <FaSun className="icon-sun" /> : <FaMoon className="icon-moon" />}
@@ -81,7 +97,7 @@ const Header = ({ theme, toggleTheme }) => {
             {/* ELVÁLASZTÓ VONAL */}
             <li className="nav-item desktop-only-separator">|</li>
 
-            {/* 4. DINAMIKUS RÉSZ: LOGIN VAGY PROFIL */}
+            {/* 5. DINAMIKUS RÉSZ: LOGIN VAGY PROFIL */}
             {!user ? (
               // HA NINCS BELÉPVE:
               <>

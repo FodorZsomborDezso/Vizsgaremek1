@@ -4,8 +4,12 @@ import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
 import Home from './pages/Home';
 import Gallery from './pages/Gallery'; // <--- ÚJ
+import Chat from './pages/Chat';
 import Upload from './pages/Upload';   // <--- ÚJ
 import Ideas from './pages/Ideas'; // <--- ÚJ IMPORT
+import Admin from './pages/Admin';
+import PublicProfile from './pages/PublicProfile'; // Tedd be felülre
+
 
 // Importáljuk a többi oldalt is (LÉTEZNIE KELL A FÁJLNAK!)
 import Login from './pages/Login';
@@ -34,8 +38,11 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} /> {/* <--- ÚJ */}
+          <Route path="/chat/:userId" element={<Chat />} />
           <Route path="/upload" element={<Upload />} />   {/* <--- ÚJ */}
           <Route path="/ideas" element={<Ideas />} /> {/* <--- ÚJ ÚTVONAL */}
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/user/:username" element={<PublicProfile />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />

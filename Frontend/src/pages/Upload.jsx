@@ -1,175 +1,168 @@
 import { useState, useEffect } from 'react';
-import { FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
-import { useNavigate, useLocation } from 'react-router-dom'; // useLocation az ötlet válaszhoz
-import './Upload.css';
-import './Auth.css';
+import { useNavigate } from 'react-router-dom';
+import { FaCloudUploadAlt, FaImage } from 'react-icons/fa';
+import './Upload.css'; // Használhatod a meglévő CSS-edet, ha van
 
 const Upload = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // Ha az Ideas oldalról jövünk, itt lehet adat
   
-  // Állapotok
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  // --- ÁLLAPOTOK ---
   const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
-  const [categoryId, setCategoryId] = useState('1'); // Alapértelmezett: 1
-  const [uploadType, setUploadType] = useState('gallery'); // 'gallery' vagy 'response'
-  const [ideaId, setIdeaId] = useState(null); // Ha válasz, melyik ötletre?
-
+  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState(1);
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null); // Kép előnézethez
   const [loading, setLoading] = useState(false);
 
-  // Ha az Ötletek oldalról jöttünk a "Megvalósítom" gombbal,
-  // akkor automatikusan beállítjuk a módot
-  // (Ehhez majd az Ideas.jsx-ben a Link-et módosítani kell state-tel)
-  
+  // Kategóriák (Ezek egyeznek a DB-ben lévőkkel: 1-Természet, 2-Város, stb.)
+  const categories = [
+    { id: 1, name: 'Természet' },
+    { id: 2, name: 'Város' },
+    { id: 3, name: 'Tech' },
+    { id: 4, name: 'Digitális Art' },
+    { id: 5, name: 'Design' }
+  ];
+
+  // Ellenőrizzük, hogy be van-e lépve
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('A feltöltéshez be kell jelentkezned!');
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  // Fájl kiválasztásának kezelése (és előnézet generálása)
   const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (selected) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      // Kép előnézet URL generálása a memóriában
+      setPreviewUrl(URL.createObjectURL(selectedFile));
     }
   };
 
-  const removeFile = () => {
-    setFile(null);
-    setPreview(null);
-  };
-
+  // --- ŰRLAP KÜLDÉSE (A VARÁZSLAT ITT TÖRTÉNIK) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if(!file) return alert("Kérlek válassz képet!");
+
+    if (!title || !file) {
+      alert("Cím és kép megadása kötelező!");
+      return;
+    }
 
     setLoading(true);
 
-    // Adatok összekészítése
+    // 1. Készítünk egy "virtuális csomagot" (FormData) a fájlnak és a szövegeknek
     const formData = new FormData();
     formData.append('title', title);
-    formData.append('description', desc);
+    formData.append('description', description);
     formData.append('category_id', categoryId);
-    formData.append('image', file);
     
-    // Ha ötletre válaszolunk, küldjük el az ID-t is
-    if (uploadType === 'response' && ideaId) {
-        formData.append('idea_id', ideaId);
-    }
+    // FIGYELEM: Ennek a neve 'image' kell legyen, mert a backend ezt várja: upload.single('image')
+    formData.append('image', file); 
+
+    const token = localStorage.getItem('token');
 
     try {
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch('http://localhost:3000/api/posts', {
-            method: 'POST',
-            headers: {
-                // FONTOS: Itt küldjük a "Belépőkártyát"
-                'Authorization': `Bearer ${token}` 
-                // A Content-Type-ot a böngésző intézi a FormData miatt!
-            },
-            body: formData
-        });
+      const response = await fetch('http://localhost:3000/api/posts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // NAGYON FONTOS: Ide TILOS beírni a 'Content-Type': 'application/json'-t! 
+          // A böngésző automatikusan beállítja a 'multipart/form-data'-t a fájlok miatt.
+        },
+        body: formData // A csomagot küldjük
+      });
 
-        if (response.ok) {
-            alert("Sikeres feltöltés!");
-            navigate('/gallery'); // Visszairányítjuk a galériába
-        } else {
-            const data = await response.json();
-            alert(data.error || "Hiba történt.");
-        }
-
+      if (response.ok) {
+        alert("Kép sikeresen feltöltve!");
+        navigate('/gallery'); // Feltöltés után átvisszük a galériába
+      } else {
+        const data = await response.json();
+        alert(data.error || "Hiba a feltöltéskor.");
+      }
     } catch (error) {
-        console.error(error);
-        alert("Nem sikerült elérni a szervert.");
+      console.error("Hiba:", error);
+      alert("Nem sikerült kapcsolódni a szerverhez.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="upload-wrapper">
-      <div className="upload-card">
-        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Új Alkotás Feltöltése</h2>
+    <div className="upload-container" style={{ maxWidth: '600px', margin: '40px auto', padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', color: 'var(--text-primary)' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <FaCloudUploadAlt style={{ color: 'var(--accent-color)' }} /> Új Alkotás Feltöltése
+      </h1>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          
-          {/* TÍPUS VÁLASZTÓ */}
-          <div className="form-group">
-            <label>Feltöltés típusa</label>
-            <select 
-                value={uploadType}
-                onChange={(e) => setUploadType(e.target.value)}
-                className="input-field" // Stílust az Auth.css vagy Upload.css adja
-                style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)'}}
-            >
-                <option value="gallery">Saját alkotás (Galéria)</option>
-                <option value="response">Válasz egy ötletre</option>
-            </select>
-          </div>
-
-          {/* HA VÁLASZ, KELL AZ IDEA ID (Ezt most manuálisan kérjük be teszteléshez, 
-              később automatizáljuk az Ideas oldalról) */}
-          {uploadType === 'response' && (
-              <div className="form-group">
-                  <label>Ötlet ID-ja (Amire válaszolsz)</label>
-                  <input 
-                    type="number" 
-                    placeholder="Írd be az ötlet sorszámát"
-                    value={ideaId || ''}
-                    onChange={(e) => setIdeaId(e.target.value)}
-                    required
-                  />
-              </div>
-          )}
-
-          {/* DRAG & DROP ZÓNA */}
-          {!preview ? (
-            <label className="upload-area">
-              <input type="file" hidden onChange={handleFileChange} accept="image/*" />
-              <FaCloudUploadAlt className="upload-icon" />
-              <h3>Kattints a kép kiválasztásához</h3>
-            </label>
-          ) : (
-            <div className="preview-container">
-              <img src={preview} alt="Előnézet" className="preview-img" />
-              <button type="button" onClick={removeFile} className="remove-btn"><FaTimes /></button>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        
+        {/* KÉP KIVÁLASZTÁSA */}
+        <div style={{ border: '2px dashed var(--border-color)', padding: '20px', borderRadius: '8px', textAlign: 'center', position: 'relative' }}>
+          {previewUrl ? (
+            <div style={{ position: 'relative' }}>
+              <img src={previewUrl} alt="Előnézet" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', objectFit: 'contain' }} />
+              <button 
+                type="button" 
+                onClick={() => { setFile(null); setPreviewUrl(null); }}
+                style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(231, 76, 60, 0.8)', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
+              >
+                Mégse
+              </button>
             </div>
+          ) : (
+            <>
+              <FaImage style={{ fontSize: '3rem', color: 'var(--text-secondary)', marginBottom: '10px' }} />
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '10px' }}>Kattints ide, vagy húzd ide a képet!</p>
+              <input 
+                type="file" 
+                accept="image/png, image/jpeg, image/webp" 
+                onChange={handleFileChange} 
+                required 
+                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, opacity: 0, cursor: 'pointer' }}
+              />
+            </>
           )}
+        </div>
 
-          <div className="form-group">
-            <label>Cím</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          </div>
+        {/* ŰRLAP MEZŐK */}
+        <input 
+          type="text" 
+          placeholder="Alkotás címe *" 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+          required 
+          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+        />
 
-          {/* KATEGÓRIA VÁLASZTÓ (Fix ID-kkal a DB alapján) */}
-          <div className="form-group">
-            <label>Kategória</label>
-            <select 
-                value={categoryId} 
-                onChange={(e) => setCategoryId(e.target.value)}
-                style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)'}}
-            >
-                <option value="1">Természet</option>
-                <option value="2">Város</option>
-                <option value="3">Tech</option>
-                <option value="4">Digitális Art</option>
-                <option value="5">Design</option>
-            </select>
-          </div>
+        <select 
+          value={categoryId} 
+          onChange={(e) => setCategoryId(e.target.value)}
+          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+        >
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
 
-          <div className="form-group">
-            <label>Leírás</label>
-            <textarea 
-              rows="3"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              style={{width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)'}}
-            ></textarea>
-          </div>
+        <textarea 
+          placeholder="Oszd meg a gondolataidat a képről (opcionális)..." 
+          value={description} 
+          onChange={(e) => setDescription(e.target.value)} 
+          rows="4"
+          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'vertical' }}
+        />
 
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'Feltöltés...' : 'Közzététel'}
-          </button>
-        </form>
+        <button 
+          type="submit" 
+          disabled={loading || !file}
+          style={{ padding: '15px', borderRadius: '8px', border: 'none', backgroundColor: (loading || !file) ? 'var(--text-secondary)' : 'var(--accent-color)', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: (loading || !file) ? 'not-allowed' : 'pointer', transition: '0.3s' }}
+        >
+          {loading ? 'Feltöltés folyamatban...' : 'Megosztás a közösséggel'}
+        </button>
 
-      </div>
+      </form>
     </div>
   );
 };
