@@ -107,7 +107,8 @@ app.get('/api/gallery', async (req, res) => {
 
 // REGISZTRÁCIÓ
 app.post('/api/auth/register', upload.single('profileImage'), async (req, res) => {
-    const { username, email, password } = req.body;
+    // ÚJ: Beolvassuk a full_name, bio és location adatokat is!
+    const { username, email, password, full_name, bio, location } = req.body;
 
     if (!username || !email || !password) {
          return res.status(400).json({ error: 'Minden kötelező mező kitöltése szükséges!' });
@@ -134,8 +135,9 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
             finalAvatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&size=128`;
         }
 
-        const sql = 'INSERT INTO users (username, email, password_hash, role, avatar_url) VALUES (?, ?, ?, ?, ?)';
-        await db.query(sql, [username, email, passwordHash, 'user', finalAvatar]);
+        // ÚJ: Bekerült a 3 új oszlop az SQL lekérdezésbe
+        const sql = 'INSERT INTO users (username, email, password_hash, role, avatar_url, full_name, bio, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        await db.query(sql, [username, email, passwordHash, 'user', finalAvatar, full_name || null, bio || null, location || null]);
 
         res.status(201).json({ message: 'Sikeres regisztráció!' });
     } catch (err) {
@@ -485,6 +487,47 @@ app.get('/api/posts/:id/image', async (req, res) => {
         res.send(posts[0].image_data); 
     } catch (err) {
         res.status(500).send('Hiba a kép betöltésekor');
+    }
+});
+
+// Profile szerkesztése
+
+app.put('/api/users/profile', authenticateToken, upload.single('avatar'), async (req, res) => {
+    const { full_name, bio, location } = req.body;
+    const userId = req.user.id;
+
+    try {
+        let finalAvatar = null;
+
+        // Ha küldött új képet, feldolgozzuk a sharp-pal (mint a regisztrációnál)
+        if (req.file) {
+            const filename = `user-${Date.now()}.jpeg`;
+            await sharp(req.file.buffer)
+                .resize(500, 500, { fit: sharp.fit.cover, position: sharp.strategy.entropy })
+                .toFormat('jpeg')
+                .jpeg({ quality: 80 })
+                .toFile(`uploads/${filename}`);
+            
+            finalAvatar = `http://localhost:3000/uploads/${filename}`;
+        }
+
+        // SQL frissítés: Ha van új kép, azt is beleírjuk, ha nincs, csak a szövegeket
+        if (finalAvatar) {
+            const sql = 'UPDATE users SET full_name = ?, bio = ?, location = ?, avatar_url = ? WHERE id = ?';
+            await db.query(sql, [full_name, bio, location, finalAvatar, userId]);
+        } else {
+            const sql = 'UPDATE users SET full_name = ?, bio = ?, location = ? WHERE id = ?';
+            await db.query(sql, [full_name, bio, location, userId]);
+        }
+
+        // Visszaküldjük a legfrissebb adatokat a frontendnek
+        const [updatedUser] = await db.query('SELECT id, username, email, role, avatar_url, full_name, bio, location FROM users WHERE id = ?', [userId]);
+
+        res.json({ message: 'Profil sikeresen frissítve!', user: updatedUser[0] });
+
+    } catch (err) {
+        console.error("Hiba a profil frissítésekor:", err);
+        res.status(500).json({ error: 'Hiba a profil frissítésekor.' });
     }
 });
 
