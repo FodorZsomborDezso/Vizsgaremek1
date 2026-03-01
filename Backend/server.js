@@ -531,6 +531,37 @@ app.put('/api/users/profile', authenticateToken, upload.single('avatar'), async 
     }
 });
 
+// ==========================
+// 22. POSZT SZERKESZTÉSE (Csak a sajátját!)
+// ==========================
+app.put('/api/posts/:id', authenticateToken, async (req, res) => {
+    const postId = req.params.id;
+    const userId = req.user.id;
+    const { title, description } = req.body;
+
+    if (!title) {
+        return res.status(400).json({ error: 'A cím megadása kötelező!' });
+    }
+
+    try {
+        // 1. Ellenőrizzük, hogy a poszt létezik-e, és tényleg azé-e a useré, aki módosítani akarja
+        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [postId, userId]);
+
+        if (post.length === 0) {
+            return res.status(403).json({ error: 'Nincs jogosultságod a szerkesztéshez, vagy a poszt nem létezik!' });
+        }
+
+        // 2. Adatbázis frissítése
+        const sql = 'UPDATE posts SET title = ?, description = ? WHERE id = ?';
+        await db.query(sql, [title, description, postId]);
+
+        res.json({ message: 'Poszt sikeresen frissítve!' });
+    } catch (err) {
+        console.error("Hiba a poszt szerkesztésekor:", err);
+        res.status(500).json({ error: 'Hiba a poszt frissítésekor.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend szerver fut: http://localhost:${PORT}`);
 });

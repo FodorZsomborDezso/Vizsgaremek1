@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, FaUserCircle, FaTrash, FaTimes, FaCloudUploadAlt } from 'react-icons/fa';
+import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, FaUserCircle, FaTrash, FaTimes, FaCloudUploadAlt, FaPen } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Profile.css';
 
@@ -15,14 +15,21 @@ const Profile = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
 
-  // --- SZERKESZTÉS ÁLLAPOTOK ---
+  // --- PROFIL SZERKESZTÉS ÁLLAPOTOK ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFullName, setEditFullName] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editAvatarFile, setEditAvatarFile] = useState(null);
-  const [editAvatarPreview, setEditAvatarPreview] = useState(null); // ÚJ: Előnézet a Modalba
+  const [editAvatarPreview, setEditAvatarPreview] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // --- POSZT SZERKESZTÉS ÁLLAPOTOK ---
+  const [isEditPostModalOpen, setIsEditPostModalOpen] = useState(false);
+  const [currentEditPost, setCurrentEditPost] = useState(null);
+  const [editPostTitle, setEditPostTitle] = useState('');
+  const [editPostDescription, setEditPostDescription] = useState('');
+  const [isPostUpdating, setIsPostUpdating] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -57,13 +64,13 @@ const Profile = () => {
       .catch(err => console.error(err));
   }, [navigate]);
 
-  // Modal megnyitása és adatok betöltése
+  // --- PROFIL SZERKESZTÉSE FÜGGVÉNYEK ---
   const openEditModal = () => {
     setEditFullName(user.full_name || '');
     setEditBio(user.bio || '');
     setEditLocation(user.location || '');
     setEditAvatarFile(null);
-    setEditAvatarPreview(user.avatar_url || null); // Előző kép betöltése
+    setEditAvatarPreview(user.avatar_url || null);
     setIsEditModalOpen(true);
   };
 
@@ -95,6 +102,7 @@ const Profile = () => {
         const oldStorage = JSON.parse(localStorage.getItem('user'));
         localStorage.setItem('user', JSON.stringify({ ...oldStorage, avatar_url: data.user.avatar_url }));
         
+        toast.success("Profil sikeresen frissítve! 👤");
         setIsEditModalOpen(false); 
       } else {
         toast.error("Hiba történt a frissítéskor.");
@@ -107,6 +115,46 @@ const Profile = () => {
     }
   };
 
+  // --- POSZT SZERKESZTÉSE FÜGGVÉNYEK ---
+  const openEditPostModal = (post) => {
+    setCurrentEditPost(post);
+    setEditPostTitle(post.title);
+    setEditPostDescription(post.description || '');
+    setIsEditPostModalOpen(true);
+  };
+
+  const handlePostUpdate = async (e) => {
+    e.preventDefault();
+    setIsPostUpdating(true);
+    const token = localStorage.getItem('token');
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/posts/${currentEditPost.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title: editPostTitle, description: editPostDescription })
+      });
+
+      if (response.ok) {
+        toast.success("Poszt sikeresen frissítve! ✏️");
+        setMyPosts(myPosts.map(p => p.id === currentEditPost.id ? { ...p, title: editPostTitle, description: editPostDescription } : p));
+        setIsEditPostModalOpen(false);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Hiba a frissítéskor.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Szerver hiba.");
+    } finally {
+      setIsPostUpdating(false);
+    }
+  };
+
+  // --- EGYÉB FÜGGVÉNYEK ---
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -118,7 +166,10 @@ const Profile = () => {
     const token = localStorage.getItem('token');
     try {
       const response = await fetch(`http://localhost:3000/api/posts/${postId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.ok) setMyPosts(myPosts.filter(post => post.id !== postId));
+      if (response.ok) {
+        setMyPosts(myPosts.filter(post => post.id !== postId));
+        toast.success("Poszt törölve! 🗑️");
+      }
     } catch (error) { console.error("Hiba:", error); }
   };
 
@@ -126,9 +177,11 @@ const Profile = () => {
 
   return (
     <div className="profile-container">
+      
+      {/* --- PROFIL KÁRTYA --- */}
       <div className="profile-card">
         <div className="cover-photo">
-          <button onClick={handleLogout} style={{ position: 'absolute', top: '20px', right: '20px', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <button onClick={handleLogout} className="logout-btn">
             <FaSignOutAlt /> Kijelentkezés
           </button>
         </div>
@@ -137,7 +190,7 @@ const Profile = () => {
           {user.avatar_url && user.avatar_url.includes('http') ? (
             <img src={user.avatar_url} alt="Avatar" className="avatar" />
           ) : (
-            <div className="avatar" style={{display:'flex', justifyContent:'center', alignItems:'center', fontSize:'3rem', color:'var(--text-secondary)', background: 'var(--bg-secondary)'}}>
+            <div className="avatar avatar-placeholder">
               <FaUserCircle />
             </div>
           )}
@@ -149,7 +202,7 @@ const Profile = () => {
 
           <p className="profile-bio">{user.bio || "Még nem írtál bemutatkozást."}</p>
           
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '15px' }}>
+          <div className="profile-info-row">
             <span><FaMapMarkerAlt /> {user.location || "Ismeretlen hely"}</span>
             <span>{user.email}</span>
           </div>
@@ -166,34 +219,47 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* --- FÜLEK --- */}
       <div className="profile-tabs">
         <button className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => setActiveTab('posts')}><FaCamera /> Saját képek</button>
         <button className={`tab-btn ${activeTab === 'likes' ? 'active' : ''}`} onClick={() => setActiveTab('likes')}><FaHeart /> Kedvelések</button>
       </div>
 
+      {/* --- GALÉRIA --- */}
       <div className="gallery-grid">
+        
+        {/* SAJÁT POSZTOK */}
         {activeTab === 'posts' && (
           myPosts.length > 0 ? (
             myPosts.map(post => (
               <div key={post.id} className="gallery-item">
-                <img src={post.image_url} alt={post.title} loading="lazy" style={{objectFit: 'cover', width: '100%', height: '100%'}} />
+                <img src={post.image_url} alt={post.title} loading="lazy" />
                 <div className="overlay">
                   <span className="img-title">{post.title}</span>
-                  <button onClick={() => handleDeletePost(post.id)} className="delete-post-btn" title="Kép törlése"><FaTrash /></button>
+                  {/* Így néz ki a helyes, új struktúra a gomboknak */}
+                  <div className="post-actions-wrapper">
+                    <button onClick={() => openEditPostModal(post)} className="action-btn edit-btn" title="Kép szerkesztése">
+                      <FaPen />
+                    </button>
+                    <button onClick={() => handleDeletePost(post.id)} className="action-btn delete-btn" title="Kép törlése">
+                      <FaTrash />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
           ) : ( <div className="empty-state">Még nem töltöttél fel képet.</div> )
         )}
 
+        {/* KEDVELT POSZTOK */}
         {activeTab === 'likes' && (
           likedPosts.length > 0 ? (
             likedPosts.map(post => (
               <div key={post.id} className="gallery-item">
-                <img src={post.image_url} alt={post.title} loading="lazy" style={{objectFit: 'cover', width: '100%', height: '100%'}} />
+                <img src={post.image_url} alt={post.title} loading="lazy" />
                 <div className="overlay">
                   <span className="img-title">{post.title}</span>
-                  <span className="img-user" style={{fontSize: '0.8rem', marginTop: '5px'}}>Készítette: @{post.username}</span>
+                  <span className="img-user">Készítette: @{post.username}</span>
                 </div>
               </div>
             ))
@@ -206,46 +272,43 @@ const Profile = () => {
       {/* ========================================= */}
       {isEditModalOpen && (
         <div className="edit-modal-overlay" onClick={() => setIsEditModalOpen(false)}>
-          <div className="edit-modal-content" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'white' }}>
-            <div className="edit-modal-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>Profil Szerkesztése</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="close-modal-btn" style={{ color: 'white' }}><FaTimes /></button>
+          <div className="edit-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="edit-modal-header">
+              <h2>Profil Szerkesztése</h2>
+              <button onClick={() => setIsEditModalOpen(false)} className="close-modal-btn"><FaTimes /></button>
             </div>
             
-            <form onSubmit={handleProfileUpdate} className="edit-modal-form" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              
+            <form onSubmit={handleProfileUpdate} className="edit-modal-form">
               <div>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Teljes Név</label>
-                <input type="text" value={editFullName} onChange={e => setEditFullName(e.target.value)} placeholder="Pl: Kovács Anna" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'white' }} />
+                <label>Teljes Név</label>
+                <input type="text" value={editFullName} onChange={e => setEditFullName(e.target.value)} placeholder="Pl: Kovács Anna" />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Rövid Bemutatkozás (Bio)</label>
-                <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Írj magadról pár sort..." rows="3" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'white', fontFamily: 'inherit', resize: 'vertical' }}></textarea>
+                <label>Rövid Bemutatkozás (Bio)</label>
+                <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Írj magadról pár sort..." rows="3"></textarea>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Helyszín</label>
-                <input type="text" value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Pl: Budapest, Magyarország" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'white' }} />
+                <label>Helyszín</label>
+                <input type="text" value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Pl: Budapest, Magyarország" />
               </div>
 
-              {/* Ugyanaz a gyönyörű Profilkép Feltöltő */}
               <div>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Új Profilkép (Opcionális)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                <label>Új Profilkép (Opcionális)</label>
+                <div className="avatar-upload-row">
+                  <div className="avatar-preview-box">
                     {editAvatarPreview ? (
-                      <img src={editAvatarPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={editAvatarPreview} alt="Preview" />
                     ) : (
-                      <FaUserCircle style={{ fontSize: '30px', color: 'var(--text-secondary)' }} />
+                      <FaUserCircle className="avatar-placeholder-icon" />
                     )}
                   </div>
-                  <label style={{ color: '#00d2ff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                  <label className="avatar-upload-label">
                     <FaCloudUploadAlt /> Kép kiválasztása
                     <input 
                       type="file" 
                       accept="image/jpeg, image/png, image/webp" 
-                      style={{ display: 'none' }} 
                       onChange={e => {
                         const file = e.target.files[0];
                         setEditAvatarFile(file);
@@ -256,9 +319,9 @@ const Profile = () => {
                 </div>
               </div>
 
-              <div className="edit-modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setIsEditModalOpen(false)} style={{ backgroundColor: 'transparent', border: '1px solid var(--border-color)', color: 'white', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Mégse</button>
-                <button type="submit" disabled={isUpdating} style={{ backgroundColor: '#00d2ff', color: 'black', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: isUpdating ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+              <div className="edit-modal-actions">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn-cancel">Mégse</button>
+                <button type="submit" disabled={isUpdating} className="btn-save">
                   {isUpdating ? 'Mentés...' : 'Mentés'}
                 </button>
               </div>
@@ -266,6 +329,40 @@ const Profile = () => {
           </div>
         </div>
       )}
+
+      {/* ========================================= */}
+      {/* 🔥 POSZT SZERKESZTÉSE MODAL 🔥            */}
+      {/* ========================================= */}
+      {isEditPostModalOpen && (
+        <div className="edit-modal-overlay" onClick={() => setIsEditPostModalOpen(false)}>
+          <div className="edit-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="edit-modal-header">
+              <h2>Poszt Szerkesztése</h2>
+              <button onClick={() => setIsEditPostModalOpen(false)} className="close-modal-btn"><FaTimes /></button>
+            </div>
+            
+            <form onSubmit={handlePostUpdate} className="edit-modal-form">
+              <div>
+                <label>Alkotás címe *</label>
+                <input type="text" value={editPostTitle} onChange={e => setEditPostTitle(e.target.value)} required />
+              </div>
+
+              <div>
+                <label>Leírás</label>
+                <textarea value={editPostDescription} onChange={e => setEditPostDescription(e.target.value)} rows="4"></textarea>
+              </div>
+
+              <div className="edit-modal-actions">
+                <button type="button" onClick={() => setIsEditPostModalOpen(false)} className="btn-cancel">Mégse</button>
+                <button type="submit" disabled={isPostUpdating || !editPostTitle} className="btn-save">
+                  {isPostUpdating ? 'Mentés...' : 'Mentés'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
