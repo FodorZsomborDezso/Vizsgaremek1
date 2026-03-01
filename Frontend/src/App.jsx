@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
-import Home from './pages/Home';
-import Gallery from './pages/Gallery'; // <--- ÚJ
-import Chat from './pages/Chat';
-import Upload from './pages/Upload';   // <--- ÚJ
-import Ideas from './pages/Ideas'; // <--- ÚJ IMPORT
-import Admin from './pages/Admin';
-import PublicProfile from './pages/PublicProfile'; // Tedd be felülre
+import Home from './pages/Home/Home';
+import Gallery from './pages/Gallery/Gallery'; // <--- ÚJ
+import Chat from './pages/Chat/Chat';
+import Upload from './pages/Upload/Upload';   // <--- ÚJ
+import Ideas from './pages/Ideas/Ideas'; // <--- ÚJ IMPORT
+import Admin from './pages/Admin/Admin';
+import PublicProfile from './pages/Profile/PublicProfile'; // Tedd be felülre
 
 
 // Importáljuk a többi oldalt is (LÉTEZNIE KELL A FÁJLNAK!)
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
+import Login from './pages/RegisterAndLogin/Login';
+import Register from './pages/RegisterAndLogin/Register';
+import Profile from './pages/Profile/Profile';
 
 import './App.css';
 
