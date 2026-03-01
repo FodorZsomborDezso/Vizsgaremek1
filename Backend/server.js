@@ -562,6 +562,56 @@ app.put('/api/posts/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// ==========================
+// GALÉRIA (BLOB, Lapozás, Keresés és Szűrés)
+// ==========================
+app.get('/api/gallery', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 9;
+        const offset = (page - 1) * limit;
+        
+        // ÚJ: Beolvassuk a keresőszót és a kategóriát a linkből
+        const search = req.query.search || '';
+        const category = req.query.category || '';
+
+        // Az SQL alapja
+        let sql = `
+            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name,
+                   COUNT(likes.user_id) AS like_count
+            FROM posts
+            JOIN users ON posts.user_id = users.id
+            JOIN categories ON posts.category_id = categories.id
+            LEFT JOIN likes ON posts.id = likes.post_id
+            WHERE posts.idea_id IS NULL
+        `;
+        
+        const queryParams = [];
+
+        // Ha van keresőszó, rászűrünk a címre (A % jelenti, hogy bármi lehet előtte/utána)
+        if (search) {
+            sql += ` AND posts.title LIKE ?`;
+            queryParams.push(`%${search}%`);
+        }
+
+        // Ha van kiválasztott kategória, rászűrünk arra is
+        if (category) {
+            sql += ` AND categories.name = ?`;
+            queryParams.push(category);
+        }
+
+        // Végül a csoportosítás és a lapozás hozzáadása
+        sql += ` GROUP BY posts.id ORDER BY posts.created_at DESC LIMIT ? OFFSET ?`;
+        queryParams.push(limit, offset);
+
+        const [rows] = await db.query(sql, queryParams);
+        res.json(formatPostsForFrontend(rows)); 
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Hiba a galéria betöltésekor' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend szerver fut: http://localhost:${PORT}`);
 });
