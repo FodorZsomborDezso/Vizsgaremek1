@@ -1,0 +1,23 @@
+.about-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; color: var(--text-primary); }
+.about-hero { text-align: center; margin-bottom: 60px; }
+.about-hero h1 { font-size: 3rem; margin-bottom: 10px; }
+.about-hero h1 span { color: #00d2ff; }
+.about-hero p { font-size: 1.2rem; color: var(--text-secondary); }
+
+.about-mission { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 60px; }
+.mission-card { background-color: var(--bg-secondary); padding: 40px 30px; border-radius: 15px; text-align: center; border: 1px solid var(--border-color); transition: transform 0.3s; }
+.mission-card:hover { transform: translateY(-10px); border-color: #00d2ff; }
+.mission-icon { font-size: 3rem; color: #00d2ff; margin-bottom: 20px; }
+.mission-card h3 { margin-bottom: 15px; font-size: 1.5rem; }
+.mission-card p { color: var(--text-secondary); line-height: 1.6; }
+
+.about-developer { background-color: var(--bg-secondary); padding: 50px; border-radius: 15px; border: 1px solid var(--border-color); }
+.about-developer h2 { text-align: center; margin-top: 0; margin-bottom: 40px; font-size: 2rem; }
+.dev-profile { display: flex; align-items: center; gap: 40px; }
+.dev-avatar { border-radius: 50%; border: 4px solid #00d2ff; width: 150px; height: 150px; }
+.dev-info h3 { margin-top: 0; color: #00d2ff; }
+.dev-info p { color: var(--text-secondary); line-height: 1.6; font-size: 1.05rem; }
+
+@media (max-width: 768px) {
+  .dev-profile { flex-direction: column; text-align: center; }
+}

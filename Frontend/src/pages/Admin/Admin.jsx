@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrash, FaUsers, FaImages, FaShieldAlt, FaExclamationTriangle, FaHeart, FaEye, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaUsers, FaImages, FaShieldAlt, FaExclamationTriangle, FaHeart, FaEye, FaTimes, FaCommentDots } from 'react-icons/fa';
 import './Admin.css';
 
 const Admin = () => {
@@ -9,9 +9,9 @@ const Admin = () => {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [reports, setReports] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]); // ÚJ: Visszajelzések állapota
   const [loading, setLoading] = useState(true);
   
-  // ÚJ: A megtekintett jelentés adatait tárolja
   const [selectedReport, setSelectedReport] = useState(null);
 
   useEffect(() => {
@@ -33,6 +33,11 @@ const Admin = () => {
 
       const reportsRes = await fetch('http://localhost:3000/api/admin/reports', { headers: { 'Authorization': `Bearer ${token}` } });
       if (reportsRes.ok) setReports(await reportsRes.json());
+
+      // ÚJ: Visszajelzések letöltése
+      const feedbackRes = await fetch('http://localhost:3000/api/admin/feedbacks', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (feedbackRes.ok) setFeedbacks(await feedbackRes.json());
+      
     } catch (error) {
       console.error(error);
     } finally {
@@ -54,33 +59,36 @@ const Admin = () => {
     if (res.ok) setPosts(posts.filter(p => p.id !== id));
   };
 
-  // --- ÚJ MODERÁCIÓS FÜGGVÉNYEK ---
+  // ÚJ: Visszajelzés törlése (Megoldva)
+  const handleDeleteFeedback = async (id) => {
+    if (!window.confirm('Biztosan törlöd ezt a visszajelzést? (Pl. mert már megoldottad)')) return;
+    const token = localStorage.getItem('token');
+    const res = await fetch(`http://localhost:3000/api/admin/feedbacks/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if (res.ok) setFeedbacks(feedbacks.filter(f => f.id !== id));
+  };
 
-  // 1. Csak a jelentést utasítjuk el (A poszt/komment marad)
+  // --- MODERÁCIÓS FÜGGVÉNYEK ---
+
   const handleDismissReport = async (reportId) => {
     const token = localStorage.getItem('token');
     await fetch(`http://localhost:3000/api/admin/reports/${reportId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setReports(reports.filter(r => r.id !== reportId));
-    setSelectedReport(null); // Ablak bezárása
+    setSelectedReport(null);
   };
 
-  // 2. A Jelentett Tartalmat Is Töröljük!
   const handleDeleteContent = async (report) => {
     if (!window.confirm("Biztosan törlöd a jelentett tartalmat? Ezt nem lehet visszavonni!")) return;
     const token = localStorage.getItem('token');
     
     try {
-        // Tartalom törlése a típustól függően
         if (report.target_type === 'post') {
             await fetch(`http://localhost:3000/api/admin/posts/${report.target_id}`, { method: 'DELETE', headers: {'Authorization': `Bearer ${token}`} });
         } else if (report.target_type === 'comment') {
             await fetch(`http://localhost:3000/api/admin/comments/${report.target_id}`, { method: 'DELETE', headers: {'Authorization': `Bearer ${token}`} });
         }
 
-        // Jelentés lezárása
         await fetch(`http://localhost:3000/api/admin/reports/${report.id}`, { method: 'DELETE', headers: {'Authorization': `Bearer ${token}`} });
 
-        // Felület frissítése
         setReports(reports.filter(r => r.id !== report.id));
         setSelectedReport(null);
         fetchData(token); 
@@ -97,6 +105,8 @@ const Admin = () => {
 
       <div className="admin-tabs">
         <button className={activeTab === 'reports' ? 'active' : ''} onClick={() => setActiveTab('reports')}><FaExclamationTriangle /> Jelentések ({reports.length})</button>
+        {/* ÚJ: Visszajelzések Fül */}
+        <button className={activeTab === 'feedbacks' ? 'active' : ''} onClick={() => setActiveTab('feedbacks')}><FaCommentDots /> Visszajelzések ({feedbacks.length})</button>
         <button className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}><FaUsers /> Felhasználók ({users.length})</button>
         <button className={activeTab === 'posts' ? 'active' : ''} onClick={() => setActiveTab('posts')}><FaImages /> Posztok ({posts.length})</button>
       </div>
@@ -123,7 +133,6 @@ const Admin = () => {
                     <td>{r.reason}</td>
                     <td>{new Date(r.created_at).toLocaleDateString()}</td>
                     <td>
-                      {/* ÚJ: Megtekintés gomb */}
                       <button className="admin-delete-btn" style={{backgroundColor: '#f39c12'}} onClick={() => setSelectedReport(r)}>
                         <FaEye /> Megtekintés
                       </button>
@@ -135,7 +144,40 @@ const Admin = () => {
           </table>
         )}
 
-        {/* Felhasználók táblázat (Ugyanaz marad) */}
+        {/* ÚJ: VISSZAJELZÉSEK TÁBLÁZAT */}
+        {activeTab === 'feedbacks' && (
+          <table className="admin-table">
+            <thead>
+              <tr><th>Típus</th><th>Név & Email</th><th>Üzenet</th><th>Dátum</th><th>Művelet</th></tr>
+            </thead>
+            <tbody>
+              {feedbacks.length > 0 ? (
+                feedbacks.map(f => (
+                  <tr key={f.id}>
+                    <td>
+                      <span style={{ background: f.type === 'Hiba' ? '#e74c3c' : f.type === 'Javaslat' ? '#2ecc71' : '#3498db', color: 'white', padding: '3px 8px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {f.type.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{f.name}</strong><br/>
+                      <span style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{f.email}</span>
+                    </td>
+                    <td style={{maxWidth: '300px', whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{f.message}</td>
+                    <td>{new Date(f.created_at).toLocaleDateString()}</td>
+                    <td>
+                      <button className="admin-delete-btn" onClick={() => handleDeleteFeedback(f.id)}>
+                        <FaTrash /> Törlés
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : ( <tr><td colSpan="5" style={{textAlign:'center', padding: '30px'}}>Nincs új visszajelzés. 📥</td></tr> )}
+            </tbody>
+          </table>
+        )}
+
+        {/* Felhasználók táblázat */}
         {activeTab === 'users' && (
           <table className="admin-table">
             <thead><tr><th>ID</th><th>Név</th><th>Email</th><th>Szerepkör</th><th>Művelet</th></tr></thead>
@@ -151,7 +193,7 @@ const Admin = () => {
           </table>
         )}
 
-        {/* Posztok táblázat (Ugyanaz marad) */}
+        {/* Posztok táblázat */}
         {activeTab === 'posts' && (
           <table className="admin-table">
             <thead><tr><th>Kép</th><th>Cím</th><th>Feltöltő</th><th>Lájkok</th><th>Művelet</th></tr></thead>
@@ -170,7 +212,7 @@ const Admin = () => {
       </div>
 
       {/* ========================================= */}
-      {/* 🔥 MODERÁCIÓS FELUGRÓ ABLAK (MODAL) 🔥   */}
+      {/* MODERÁCIÓS FELUGRÓ ABLAK (MODAL)           */}
       {/* ========================================= */}
       {selectedReport && (
         <div className="admin-modal-overlay" onClick={() => setSelectedReport(null)}>

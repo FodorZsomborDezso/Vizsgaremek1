@@ -24,15 +24,12 @@ const upload = multer({ storage: storage });
 // SEGÉDFÜGGVÉNYEK
 // ==========================
 
-// Kicseréli az image_url-t a mi BLOB végpontunkra, és megvédi a böngészőt a lefagyástól
 const formatPostsForFrontend = (posts) => {
     return posts.map(post => {
         const formattedPost = { ...post };
-        // Ha az adatbázisban a link 'BLOB', akkor tudjuk, hogy az új végpontot kell használni
         if (formattedPost.image_url === 'BLOB') {
             formattedPost.image_url = `http://localhost:3000/api/posts/${formattedPost.id}/image`;
         }
-        // NAGYON FONTOS: Töröljük a nyers bináris adatot a válaszból, különben gigantikus lesz a JSON!
         delete formattedPost.image_data; 
         return formattedPost;
     });
@@ -67,6 +64,60 @@ async function isAdmin(req, res, next) {
 // VÉGPONTOK
 // ==========================
 
+// --- GALÉRIA ---
+app.get('/api/gallery', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 9;
+        const offset = (page - 1) * limit;
+        
+        const search = req.query.search || '';
+        const category = req.query.category || '';
+        const sort = req.query.sort || 'latest';
+
+        let sql = `
+            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name,
+                   COUNT(likes.user_id) AS like_count
+            FROM posts
+            JOIN users ON posts.user_id = users.id
+            JOIN categories ON posts.category_id = categories.id
+            LEFT JOIN likes ON posts.id = likes.post_id
+            WHERE posts.idea_id IS NULL
+        `;
+        
+        const queryParams = [];
+
+        if (search) {
+            sql += ` AND posts.title LIKE ?`;
+            queryParams.push(`%${search}%`);
+        }
+
+        if (category) {
+            sql += ` AND categories.name = ?`;
+            queryParams.push(category);
+        }
+
+        sql += ` GROUP BY posts.id `;
+
+        if (sort === 'popular') {
+            sql += ` ORDER BY like_count DESC `; 
+        } else if (sort === 'oldest') {
+            sql += ` ORDER BY posts.created_at ASC `; 
+        } else {
+            sql += ` ORDER BY posts.created_at DESC `; 
+        }
+
+        sql += ` LIMIT ? OFFSET ?`;
+        queryParams.push(limit, offset);
+
+        const [rows] = await db.query(sql, queryParams);
+        res.json(formatPostsForFrontend(rows)); 
+    } catch (err) {
+        console.error("Hiba a galéria betöltésekor:", err);
+        res.status(500).json({ error: 'Hiba a galéria betöltésekor' });
+    }
+});
+
 app.get('/api/ideas', async (req, res) => {
     try {
         const sql = `
@@ -83,31 +134,8 @@ app.get('/api/ideas', async (req, res) => {
     }
 });
 
-// GALÉRIA (BLOB formázással)
-app.get('/api/gallery', async (req, res) => {
-    try {
-        const sql = `
-            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name,
-                   COUNT(likes.user_id) AS like_count
-            FROM posts
-            JOIN users ON posts.user_id = users.id
-            JOIN categories ON posts.category_id = categories.id
-            LEFT JOIN likes ON posts.id = likes.post_id
-            WHERE posts.idea_id IS NULL
-            GROUP BY posts.id
-            ORDER BY posts.created_at DESC
-        `;
-        const [rows] = await db.query(sql);
-        res.json(formatPostsForFrontend(rows)); // Átengedjük a szűrőn!
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Hiba a galéria betöltésekor' });
-    }
-});
-
-// REGISZTRÁCIÓ
+// --- AUTENTIKÁCIÓ ---
 app.post('/api/auth/register', upload.single('profileImage'), async (req, res) => {
-    // ÚJ: Beolvassuk a full_name, bio és location adatokat is!
     const { username, email, password, full_name, bio, location } = req.body;
 
     if (!username || !email || !password) {
@@ -135,7 +163,6 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
             finalAvatar = `https://ui-avatars.com/api/?name=${username}&background=random&color=fff&size=128`;
         }
 
-        // ÚJ: Bekerült a 3 új oszlop az SQL lekérdezésbe
         const sql = 'INSERT INTO users (username, email, password_hash, role, avatar_url, full_name, bio, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
         await db.query(sql, [username, email, passwordHash, 'user', finalAvatar, full_name || null, bio || null, location || null]);
 
@@ -146,17 +173,14 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
     }
 });
 
-// BEJELENTKEZÉS
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
-
     try {
         const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
         if (users.length === 0) return res.status(400).json({ error: 'Hibás email vagy jelszó!' });
 
         const user = users[0];
         const isMatch = await bcrypt.compare(password, user.password_hash);
-        
         if (!isMatch) return res.status(400).json({ error: 'Hibás email vagy jelszó!' });
 
         const token = jwt.sign(
@@ -171,18 +195,12 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// ==========================
-// POSZT FELTÖLTÉSE (BLOB MÓDSZER!)
-// ==========================
+// --- POSZTOK ---
 app.post('/api/posts', authenticateToken, upload.single('image'), async (req, res) => {
     const { title, description, category_id, idea_id } = req.body;
-
-    if (!title || !req.file) {
-        return res.status(400).json({ error: 'Cím és Kép megadása kötelező!' });
-    }
+    if (!title || !req.file) return res.status(400).json({ error: 'Cím és Kép megadása kötelező!' });
 
     try {
-        // Kép feldolgozása ÉS memóriában tartása (buffer)
         const optimizedImageBuffer = await sharp(req.file.buffer)
             .resize(1200, 800, { fit: sharp.fit.inside, withoutEnlargement: true })
             .toFormat('jpeg')
@@ -194,70 +212,77 @@ app.post('/api/posts', authenticateToken, upload.single('image'), async (req, re
             finalIdeaId = parseInt(idea_id);
         }
 
-        // Mentés az adatbázisba: az image_url-be egy 'BLOB' címkét teszünk
-        const sql = `
-            INSERT INTO posts (user_id, category_id, idea_id, title, description, image_url, image_data, image_type) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        const sql = `INSERT INTO posts (user_id, category_id, idea_id, title, description, image_url, image_data, image_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        await db.query(sql, [req.user.id, category_id || 1, finalIdeaId, title, description, 'BLOB', optimizedImageBuffer, 'image/jpeg']);
 
-        await db.query(sql, [
-            req.user.id, 
-            category_id || 1, 
-            finalIdeaId, 
-            title, 
-            description, 
-            'BLOB', // Ez jelzi a lekérésnél, hogy ez BLOB
-            optimizedImageBuffer, 
-            'image/jpeg'
-        ]);
-
-        res.status(201).json({ message: 'Poszt sikeresen létrehozva (BLOB)!' });
-
+        res.status(201).json({ message: 'Poszt sikeresen létrehozva!' });
     } catch (err) {
         console.error("SQL HIBA:", err.message); 
-        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-             return res.status(400).json({ error: `Nincs ilyen azonosítójú ötlet az adatbázisban!` });
-        }
         res.status(500).json({ error: 'Adatbázis hiba történt.' });
     }
 });
 
-// SAJÁT POSZTOK (BLOB formázással)
-app.get('/api/my-posts', authenticateToken, async (req, res) => {
+app.put('/api/posts/:id', authenticateToken, async (req, res) => {
+    const postId = req.params.id;
+    const userId = req.user.id;
+    const { title, description } = req.body;
+    if (!title) return res.status(400).json({ error: 'A cím megadása kötelező!' });
+
     try {
-        const [rows] = await db.query('SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
-        res.json(formatPostsForFrontend(rows));
+        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [postId, userId]);
+        if (post.length === 0) return res.status(403).json({ error: 'Nincs jogosultságod a szerkesztéshez!' });
+
+        await db.query('UPDATE posts SET title = ?, description = ? WHERE id = ?', [title, description, postId]);
+        res.json({ message: 'Poszt sikeresen frissítve!' });
     } catch (err) {
-        res.status(500).json({ error: 'Hiba a posztok lekérdezésekor' });
+        res.status(500).json({ error: 'Hiba a poszt frissítésekor.' });
     }
 });
 
-app.post('/api/ideas', authenticateToken, async (req, res) => {
-    const { title, description, category_id } = req.body;
-    if (!title || !description || !category_id) return res.status(400).json({ error: 'Minden mező kitöltése kötelező!' });
-
+app.delete('/api/posts/:id', authenticateToken, async (req, res) => {
     try {
-        await db.query('INSERT INTO ideas (user_id, category_id, title, description) VALUES (?, ?, ?, ?)', [req.user.id, category_id, title, description]);
-        res.status(201).json({ message: 'Ötlet sikeresen közzétéve!' });
+        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
+        if (post.length === 0) return res.status(403).json({ error: 'Nincs jogosultságod!' });
+        await db.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Poszt sikeresen törölve!' });
     } catch (err) {
-        res.status(500).json({ error: 'Hiba az ötlet mentésekor.' });
+        res.status(500).json({ error: 'Hiba a törlés során.' });
     }
 });
 
-// FŐOLDAL LEGÚJABB (BLOB formázással)
-app.get('/api/latest-posts', async (req, res) => {
+app.get('/api/posts/:id/image', async (req, res) => {
     try {
-        const sql = `
-            SELECT posts.*, users.username, users.avatar_url 
-            FROM posts 
-            JOIN users ON posts.user_id = users.id 
-            WHERE posts.idea_id IS NULL
-            ORDER BY posts.created_at DESC LIMIT 3
-        `;
-        const [rows] = await db.query(sql);
-        res.json(formatPostsForFrontend(rows));
+        const [posts] = await db.query('SELECT image_data, image_type FROM posts WHERE id = ?', [req.params.id]);
+        if (posts.length === 0 || !posts[0].image_data) return res.status(404).send('Kép nem található');
+        res.setHeader('Content-Type', posts[0].image_type || 'image/jpeg');
+        res.send(posts[0].image_data); 
     } catch (err) {
-        res.status(500).json({ error: 'Hiba a legújabb posztok lekérésekor.' });
+        res.status(500).send('Hiba a kép betöltésekor');
+    }
+});
+
+// --- KOMMENTEK ÉS LÁJKOK ---
+app.get('/api/posts/:id/comments', async (req, res) => {
+    try {
+        const sql = 'SELECT comments.*, users.username, users.avatar_url FROM comments JOIN users ON comments.user_id = users.id WHERE comments.post_id = ? ORDER BY comments.created_at ASC';
+        const [rows] = await db.query(sql, [req.params.id]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Hiba a kommentek betöltésekor' });
+    }
+});
+
+app.post('/api/posts/:id/comments', authenticateToken, async (req, res) => {
+    const { content } = req.body;
+    if (!content || content.trim() === '') return res.status(400).json({ error: 'A komment nem lehet üres!' });
+
+    try {
+        await db.query('INSERT INTO comments (user_id, post_id, content) VALUES (?, ?, ?)', [req.user.id, req.params.id, content]);
+        res.status(201).json({ message: 'Komment sikeresen elküldve!' });
+    } catch (err) {
+        // 🔥 EZ A RÉSZ FOGJA MEGMONDANI, MI A HIBA AZ ADATBÁZISBAN! 🔥
+        console.error("🔥 SQL HIBA A KOMMENTNÉL:", err.message);
+        res.status(500).json({ error: `Hiba a komment mentésekor: ${err.message}` });
     }
 });
 
@@ -287,60 +312,86 @@ app.post('/api/posts/:id/like', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/posts/:id/comments', async (req, res) => {
+// --- PROFILOK ÉS EGYÉB LIKELT/SAJÁT POSZTOK ---
+app.get('/api/my-posts', authenticateToken, async (req, res) => {
     try {
-        const sql = 'SELECT comments.*, users.username, users.avatar_url FROM comments JOIN users ON comments.user_id = users.id WHERE comments.post_id = ? ORDER BY comments.created_at ASC';
-        const [rows] = await db.query(sql, [req.params.id]);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Hiba a kommentek betöltésekor' });
-    }
+        const [rows] = await db.query('SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+        res.json(formatPostsForFrontend(rows));
+    } catch (err) { res.status(500).json({ error: 'Hiba' }); }
 });
 
-app.post('/api/posts/:id/comments', authenticateToken, async (req, res) => {
-    const { content } = req.body;
-    if (!content || content.trim() === '') return res.status(400).json({ error: 'A komment nem lehet üres!' });
-
+app.get('/api/latest-posts', async (req, res) => {
     try {
-        await db.query('INSERT INTO comments (user_id, post_id, content) VALUES (?, ?, ?)', [req.user.id, req.params.id, content]);
-        res.status(201).json({ message: 'Komment sikeresen elküldve!' });
-    } catch (err) {
-        res.status(500).json({ error: 'Hiba a komment mentésekor.' });
-    }
+        const sql = `SELECT posts.*, users.username, users.avatar_url FROM posts JOIN users ON posts.user_id = users.id WHERE posts.idea_id IS NULL ORDER BY posts.created_at DESC LIMIT 3`;
+        const [rows] = await db.query(sql);
+        res.json(formatPostsForFrontend(rows));
+    } catch (err) { res.status(500).json({ error: 'Hiba' }); }
 });
 
-// LÁJKOLT POSZTOK (BLOB formázással)
 app.get('/api/my-liked-posts', authenticateToken, async (req, res) => {
     try {
-        const sql = `
-            SELECT posts.*, users.username, users.avatar_url 
-            FROM posts JOIN likes ON posts.id = likes.post_id JOIN users ON posts.user_id = users.id
-            WHERE likes.user_id = ? ORDER BY likes.created_at DESC
-        `;
+        const sql = `SELECT posts.*, users.username, users.avatar_url FROM posts JOIN likes ON posts.id = likes.post_id JOIN users ON posts.user_id = users.id WHERE likes.user_id = ? ORDER BY likes.created_at DESC`;
         const [rows] = await db.query(sql, [req.user.id]);
         res.json(formatPostsForFrontend(rows));
-    } catch (err) {
-        res.status(500).json({ error: 'Hiba a kedvelt posztok lekérésekor.' });
-    }
+    } catch (err) { res.status(500).json({ error: 'Hiba' }); }
 });
 
-app.delete('/api/posts/:id', authenticateToken, async (req, res) => {
+app.put('/api/users/profile', authenticateToken, upload.single('avatar'), async (req, res) => {
+    const { full_name, bio, location } = req.body;
+    const userId = req.user.id;
     try {
-        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
-        if (post.length === 0) return res.status(403).json({ error: 'Nincs jogosultságod!' });
-        await db.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Poszt sikeresen törölve!' });
-    } catch (err) {
-        res.status(500).json({ error: 'Hiba a törlés során.' });
-    }
+        let finalAvatar = null;
+        if (req.file) {
+            const filename = `user-${Date.now()}.jpeg`;
+            await sharp(req.file.buffer).resize(500, 500, { fit: sharp.fit.cover }).toFormat('jpeg').jpeg({ quality: 80 }).toFile(`uploads/${filename}`);
+            finalAvatar = `http://localhost:3000/uploads/${filename}`;
+        }
+        if (finalAvatar) {
+            await db.query('UPDATE users SET full_name = ?, bio = ?, location = ?, avatar_url = ? WHERE id = ?', [full_name, bio, location, finalAvatar, userId]);
+        } else {
+            await db.query('UPDATE users SET full_name = ?, bio = ?, location = ? WHERE id = ?', [full_name, bio, location, userId]);
+        }
+        const [updatedUser] = await db.query('SELECT id, username, email, role, avatar_url, full_name, bio, location FROM users WHERE id = ?', [userId]);
+        res.json({ message: 'Profil sikeresen frissítve!', user: updatedUser[0] });
+    } catch (err) { res.status(500).json({ error: 'Hiba' }); }
 });
 
-// ADMIN VÉGPONTOK
+app.get('/api/users/:username', async (req, res) => {
+    try {
+        const [users] = await db.query(`SELECT id, username, full_name, bio, avatar_url, location, created_at, (SELECT COUNT(*) FROM follows WHERE following_id = users.id) AS followers_count, (SELECT COUNT(*) FROM follows WHERE follower_id = users.id) AS following_count FROM users WHERE username = ?`, [req.params.username]);
+        if (users.length === 0) return res.status(404).json({ error: 'Nincs találat!' });
+        const [posts] = await db.query('SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC', [users[0].id]);
+        res.json({ user: users[0], posts: formatPostsForFrontend(posts) });
+    } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
+});
+
+app.get('/api/users/:id/is-following', authenticateToken, async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?', [req.user.id, req.params.id]);
+        res.json({ isFollowing: rows.length > 0 });
+    } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
+});
+
+app.post('/api/users/:id/follow', authenticateToken, async (req, res) => {
+    if (req.user.id == req.params.id) return res.status(400).json({ error: 'Magadat nem követheted!' });
+    try {
+        const [existing] = await db.query('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?', [req.user.id, req.params.id]);
+        if (existing.length > 0) {
+            await db.query('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', [req.user.id, req.params.id]);
+            res.json({ followed: false });
+        } else {
+            await db.query('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)', [req.user.id, req.params.id]);
+            res.json({ followed: true });
+        }
+    } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
+});
+
+// --- ADMIN ÉS JELENTÉSEK ---
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     try {
         const [users] = await db.query('SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC');
         res.json(users);
-    } catch (err) { res.status(500).json({ error: 'Hiba a felhasználók lekérésekor.' }); }
+    } catch (err) { res.status(500).json({ error: 'Hiba' }); }
 });
 
 app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {
@@ -376,8 +427,6 @@ app.get('/api/admin/reports', authenticateToken, isAdmin, async (req, res) => {
             ORDER BY reports.created_at DESC
         `;
         const [reports] = await db.query(sql);
-        
-        // Formázzuk a jelentésekben lévő képeket is, ha BLOB
         const formattedReports = reports.map(r => {
             if (r.post_image === 'BLOB') r.post_image = `http://localhost:3000/api/posts/${r.target_id}/image`;
             return r;
@@ -400,54 +449,28 @@ app.delete('/api/admin/comments/:id', authenticateToken, isAdmin, async (req, re
     } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
 });
 
-// NYILVÁNOS PROFIL (BLOB formázással)
-app.get('/api/users/:username', async (req, res) => {
+// ADMIN: VISSZAJELZÉSEK LEKÉRÉSE
+app.get('/api/admin/feedbacks', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const username = req.params.username;
-        const [users] = await db.query(`
-            SELECT id, username, full_name, bio, avatar_url, location, created_at,
-            (SELECT COUNT(*) FROM follows WHERE following_id = users.id) AS followers_count,
-            (SELECT COUNT(*) FROM follows WHERE follower_id = users.id) AS following_count
-            FROM users WHERE username = ?
-        `, [username]);
-
-        if (users.length === 0) return res.status(404).json({ error: 'Felhasználó nem található!' });
-
-        const [posts] = await db.query('SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC', [users[0].id]);
-        
-        res.json({ user: users[0], posts: formatPostsForFrontend(posts) });
+        const [feedbacks] = await db.query('SELECT * FROM feedbacks ORDER BY created_at DESC');
+        res.json(feedbacks);
     } catch (err) {
-        res.status(500).json({ error: 'Hiba.' });
+        res.status(500).json({ error: 'Hiba a visszajelzések lekérésekor.' });
     }
 });
 
-app.get('/api/users/:id/is-following', authenticateToken, async (req, res) => {
+// ADMIN: VISSZAJELZÉS TÖRLÉSE (MEGOLDVA)
+app.delete('/api/admin/feedbacks/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?', [req.user.id, req.params.id]);
-        res.json({ isFollowing: rows.length > 0 });
-    } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
+        await db.query('DELETE FROM feedbacks WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Visszajelzés törölve!' });
+    } catch (err) {
+        res.status(500).json({ error: 'Hiba a törlés során.' });
+    }
 });
 
-app.post('/api/users/:id/follow', authenticateToken, async (req, res) => {
-    const followerId = req.user.id;
-    const followingId = req.params.id;
-    if (followerId == followingId) return res.status(400).json({ error: 'Magadat nem követheted!' });
-
-    try {
-        const [existing] = await db.query('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?', [followerId, followingId]);
-        if (existing.length > 0) {
-            await db.query('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', [followerId, followingId]);
-            res.json({ followed: false });
-        } else {
-            await db.query('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)', [followerId, followingId]);
-            res.json({ followed: true });
-        }
-    } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
-});
-
+// --- ÜZENETEK (CHAT) ---
 app.get('/api/messages/:otherUserId', authenticateToken, async (req, res) => {
-    const myId = req.user.id;
-    const otherUserId = req.params.otherUserId;
     try {
         const sql = `
             SELECT messages.*, sender.username AS sender_name, sender.avatar_url AS sender_avatar, receiver.username AS receiver_name, receiver.avatar_url AS receiver_avatar
@@ -455,160 +478,68 @@ app.get('/api/messages/:otherUserId', authenticateToken, async (req, res) => {
             WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
             ORDER BY created_at ASC
         `;
-        const [messages] = await db.query(sql, [myId, otherUserId, otherUserId, myId]);
+        const [messages] = await db.query(sql, [req.user.id, req.params.otherUserId, req.params.otherUserId, req.user.id]);
         res.json(messages);
     } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
 });
 
 app.post('/api/messages/:otherUserId', authenticateToken, async (req, res) => {
-    const myId = req.user.id;
-    const otherUserId = req.params.otherUserId;
     const { content } = req.body;
     if (!content || content.trim() === '') return res.status(400).json({ error: 'Üres!' });
-
     try {
-        const [result] = await db.query('INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)', [myId, otherUserId, content]);
+        const [result] = await db.query('INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)', [req.user.id, req.params.otherUserId, content]);
         res.status(201).json({ message: 'Elküldve!', messageId: result.insertId });
     } catch (err) { res.status(500).json({ error: 'Hiba.' }); }
 });
 
-// ==========================
-// KÉP KISZOLGÁLÁSA BLOB-BÓL (EZ KÜLDI KI A KÉPET A BÖNGÉSZŐNEK!)
-// ==========================
-app.get('/api/posts/:id/image', async (req, res) => {
+app.post('/api/ideas', authenticateToken, async (req, res) => {
+    const { title, description, category_id } = req.body;
+    if (!title || !description || !category_id) return res.status(400).json({ error: 'Minden mező kitöltése kötelező!' });
     try {
-        const [posts] = await db.query('SELECT image_data, image_type FROM posts WHERE id = ?', [req.params.id]);
-        
-        if (posts.length === 0 || !posts[0].image_data) {
-            return res.status(404).send('Kép nem található');
-        }
-
-        res.setHeader('Content-Type', posts[0].image_type || 'image/jpeg');
-        res.send(posts[0].image_data); 
-    } catch (err) {
-        res.status(500).send('Hiba a kép betöltésekor');
-    }
+        await db.query('INSERT INTO ideas (user_id, category_id, title, description) VALUES (?, ?, ?, ?)', [req.user.id, category_id, title, description]);
+        res.status(201).json({ message: 'Ötlet sikeresen közzétéve!' });
+    } catch (err) { res.status(500).json({ error: 'Hiba az ötlet mentésekor.' }); }
 });
 
-// Profile szerkesztése
-
-app.put('/api/users/profile', authenticateToken, upload.single('avatar'), async (req, res) => {
-    const { full_name, bio, location } = req.body;
-    const userId = req.user.id;
-
+// MEGVALÓSÍTÁSOK LEKÉRÉSE EGY ÖTLETHEZ
+app.get('/api/ideas/:id/implementations', async (req, res) => {
     try {
-        let finalAvatar = null;
-
-        // Ha küldött új képet, feldolgozzuk a sharp-pal (mint a regisztrációnál)
-        if (req.file) {
-            const filename = `user-${Date.now()}.jpeg`;
-            await sharp(req.file.buffer)
-                .resize(500, 500, { fit: sharp.fit.cover, position: sharp.strategy.entropy })
-                .toFormat('jpeg')
-                .jpeg({ quality: 80 })
-                .toFile(`uploads/${filename}`);
-            
-            finalAvatar = `http://localhost:3000/uploads/${filename}`;
-        }
-
-        // SQL frissítés: Ha van új kép, azt is beleírjuk, ha nincs, csak a szövegeket
-        if (finalAvatar) {
-            const sql = 'UPDATE users SET full_name = ?, bio = ?, location = ?, avatar_url = ? WHERE id = ?';
-            await db.query(sql, [full_name, bio, location, finalAvatar, userId]);
-        } else {
-            const sql = 'UPDATE users SET full_name = ?, bio = ?, location = ? WHERE id = ?';
-            await db.query(sql, [full_name, bio, location, userId]);
-        }
-
-        // Visszaküldjük a legfrissebb adatokat a frontendnek
-        const [updatedUser] = await db.query('SELECT id, username, email, role, avatar_url, full_name, bio, location FROM users WHERE id = ?', [userId]);
-
-        res.json({ message: 'Profil sikeresen frissítve!', user: updatedUser[0] });
-
-    } catch (err) {
-        console.error("Hiba a profil frissítésekor:", err);
-        res.status(500).json({ error: 'Hiba a profil frissítésekor.' });
-    }
-});
-
-// ==========================
-// 22. POSZT SZERKESZTÉSE (Csak a sajátját!)
-// ==========================
-app.put('/api/posts/:id', authenticateToken, async (req, res) => {
-    const postId = req.params.id;
-    const userId = req.user.id;
-    const { title, description } = req.body;
-
-    if (!title) {
-        return res.status(400).json({ error: 'A cím megadása kötelező!' });
-    }
-
-    try {
-        // 1. Ellenőrizzük, hogy a poszt létezik-e, és tényleg azé-e a useré, aki módosítani akarja
-        const [post] = await db.query('SELECT * FROM posts WHERE id = ? AND user_id = ?', [postId, userId]);
-
-        if (post.length === 0) {
-            return res.status(403).json({ error: 'Nincs jogosultságod a szerkesztéshez, vagy a poszt nem létezik!' });
-        }
-
-        // 2. Adatbázis frissítése
-        const sql = 'UPDATE posts SET title = ?, description = ? WHERE id = ?';
-        await db.query(sql, [title, description, postId]);
-
-        res.json({ message: 'Poszt sikeresen frissítve!' });
-    } catch (err) {
-        console.error("Hiba a poszt szerkesztésekor:", err);
-        res.status(500).json({ error: 'Hiba a poszt frissítésekor.' });
-    }
-});
-
-// ==========================
-// GALÉRIA (BLOB, Lapozás, Keresés és Szűrés)
-// ==========================
-app.get('/api/gallery', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 9;
-        const offset = (page - 1) * limit;
-        
-        // ÚJ: Beolvassuk a keresőszót és a kategóriát a linkből
-        const search = req.query.search || '';
-        const category = req.query.category || '';
-
-        // Az SQL alapja
-        let sql = `
-            SELECT posts.*, users.username, users.avatar_url, categories.name as category_name,
+        const sql = `
+            SELECT posts.*, users.username, users.avatar_url,
                    COUNT(likes.user_id) AS like_count
-            FROM posts
-            JOIN users ON posts.user_id = users.id
-            JOIN categories ON posts.category_id = categories.id
+            FROM posts 
+            JOIN users ON posts.user_id = users.id 
             LEFT JOIN likes ON posts.id = likes.post_id
-            WHERE posts.idea_id IS NULL
+            WHERE posts.idea_id = ?
+            GROUP BY posts.id
+            ORDER BY posts.created_at DESC
         `;
+        const [rows] = await db.query(sql, [req.params.id]);
         
-        const queryParams = [];
-
-        // Ha van keresőszó, rászűrünk a címre (A % jelenti, hogy bármi lehet előtte/utána)
-        if (search) {
-            sql += ` AND posts.title LIKE ?`;
-            queryParams.push(`%${search}%`);
-        }
-
-        // Ha van kiválasztott kategória, rászűrünk arra is
-        if (category) {
-            sql += ` AND categories.name = ?`;
-            queryParams.push(category);
-        }
-
-        // Végül a csoportosítás és a lapozás hozzáadása
-        sql += ` GROUP BY posts.id ORDER BY posts.created_at DESC LIMIT ? OFFSET ?`;
-        queryParams.push(limit, offset);
-
-        const [rows] = await db.query(sql, queryParams);
-        res.json(formatPostsForFrontend(rows)); 
+        // A formatPostsForFrontend átalakítja a BLOB képeket URL-lé
+        res.json(formatPostsForFrontend(rows));
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Hiba a galéria betöltésekor' });
+        console.error("Hiba a megvalósítások lekérésekor:", err);
+        res.status(500).json({ error: 'Hiba a megvalósítások betöltésekor' });
+    }
+});
+
+// ==========================
+// VISSZAJELZÉSEK (FEEDBACK)
+// ==========================
+app.post('/api/feedback', async (req, res) => {
+    const { name, email, type, message } = req.body;
+    
+    if (!name || !email || !message) {
+        return res.status(400).json({ error: 'Minden kötelező mezőt ki kell tölteni!' });
+    }
+
+    try {
+        await db.query('INSERT INTO feedbacks (name, email, type, message) VALUES (?, ?, ?, ?)', [name, email, type, message]);
+        res.status(201).json({ message: 'Visszajelzés sikeresen elküldve!' });
+    } catch (err) {
+        console.error("Hiba a visszajelzés mentésekor:", err);
+        res.status(500).json({ error: 'Szerver hiba a visszajelzés küldésekor.' });
     }
 });
 

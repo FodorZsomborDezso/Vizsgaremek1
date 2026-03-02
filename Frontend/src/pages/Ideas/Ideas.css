@@ -1,281 +1,262 @@
-/* src/pages/Ideas.css */
-.ideas-container {
-  padding: 40px 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.ideas-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.new-idea-btn {
-  background-color: var(--accent-color);
-  color: #fff;
-  border: none;
-  padding: 12px 25px;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 20px;
-  transition: transform 0.2s;
-}
-
-.new-idea-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
-}
-
-/* Ötlet Kártyák */
-.ideas-list {
+/* ========================================= */
+/* 1. FŐ ELRENDEZÉS (Mint a Galériában)      */
+/* ========================================= */
+.ideas-page-layout {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  gap: 40px; 
+  align-items: flex-start; 
+}
+
+/* ========================================= */
+/* 2. BAL OLDALI SÁV (Közös stílusok)        */
+/* ========================================= */
+.ideas-sidebar { width: 300px; flex-shrink: 0; }
+/* (A .sidebar-sticky-content, .filter-group, .search-bar stb. stílusokat ha akarod,
+   beimportálhatod a Gallery.css-ből is, vagy belemásolhatod ide, ha teljesen szeparált fájlokat akarsz. 
+   Biztonság kedvéért ide is beteszem a legfontosabbakat!) */
+
+.sidebar-sticky-content {
+  position: sticky; top: 90px; 
+  background-color: var(--bg-secondary); padding: 25px;
+  border-radius: 12px; border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.sidebar-title { margin-top: 0; margin-bottom: 25px; font-size: 1.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+.filter-group { margin-bottom: 25px; }
+.filter-group label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 10px; }
+.search-bar { display: flex; align-items: center; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 15px; }
+.search-bar input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); }
+.styled-select { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-primary); color: var(--text-primary); outline: none; }
+.category-list { display: flex; flex-direction: column; gap: 5px; }
+.category-list-item { background: transparent; border: none; color: var(--text-primary); text-align: left; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
+.category-list-item:hover { background-color: var(--bg-primary); }
+.category-list-item.active { background-color: #00d2ff; color: black; font-weight: bold; }
+
+/* ========================================= */
+/* 3. JOBB OLDALI TARTALOM ÉS CÍM            */
+/* ========================================= */
+.ideas-main { flex-grow: 1; min-width: 0; }
+
+.ideas-header-row {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;
+}
+.ideas-title { margin: 0; font-size: 2.2rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+
+/* Új ötlet gomb */
+.new-idea-btn {
+  display: flex; align-items: center;
+  background: linear-gradient(45deg, #00d2ff, #3a7bd5); color: white;
+  padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.new-idea-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4); }
+
+/* ========================================= */
+/* 4. ÖTLET KÁRTYÁK RÁCSA (Szöveges Grid)    */
+/* ========================================= */
+.ideas-grid {
+  display: grid;
+  /* Kisebb kártyák, mert nincs bennük kép, jobban elférnek egymás mellett */
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 25px;
 }
 
 .idea-card {
   background-color: var(--bg-secondary);
+  border-radius: 12px;
   border: 1px solid var(--border-color);
-  border-radius: 15px;
-  padding: 25px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
-  transition: transform 0.2s, border-color 0.2s;
-  box-shadow: var(--shadow);
 }
 
 .idea-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent-color);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-color: #00d2ff; /* Finom keret kiemelés hoverre */
 }
 
-.idea-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+/* Kártya Fejléc (Kategória és Dátum) */
+.idea-card-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+}
+.idea-badge {
+  background-color: rgba(0, 210, 255, 0.1); color: #00d2ff;
+  padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
+}
+.idea-date { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* Kártya Törzs (Cím és Leírás) */
+.idea-card-body { flex-grow: 1; }
+.idea-card-title { margin: 0 0 10px 0; font-size: 1.3rem; color: var(--text-primary); line-height: 1.3; }
+.idea-card-desc { margin: 0 0 20px 0; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
+
+/* Kártya Lábléc (Készítő és Gomb) */
+.idea-card-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 15px; border-top: 1px solid var(--border-color);
 }
 
-.idea-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: bold;
-  color: var(--text-primary);
+.idea-author {
+  display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); font-weight: bold; font-size: 0.9rem;
+}
+.author-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+.author-placeholder { font-size: 35px; color: var(--text-secondary); }
+
+.implement-btn {
+  background-color: transparent; border: 2px solid var(--accent-color); color: var(--text-primary);
+  padding: 8px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s;
+}
+.implement-btn:hover { background-color: var(--accent-color); color: white; }
+
+/* Üzenetek */
+.loading-spinner, .empty-state { text-align: center; margin-top: 40px; color: var(--text-secondary); font-size: 1.1rem; }
+.empty-state { background-color: var(--bg-secondary); padding: 40px; border-radius: 12px; border: 1px dashed var(--border-color); }
+
+/* ========================================= */
+/* 5. MOBIL NÉZET                            */
+/* ========================================= */
+@media (max-width: 900px) {
+  .ideas-page-layout { flex-direction: column; }
+  .ideas-sidebar { width: 100%; }
+  .sidebar-sticky-content { position: relative; top: 0; }
+  .ideas-header-row { flex-direction: column; align-items: flex-start; gap: 15px; }
 }
 
-.user-avatar-small {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
+/* ========================================= */
+/* MEGVALÓSÍTÁSOK FELUGRÓ ABLAK (MODAL)      */
+/* ========================================= */
+.lightbox-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center;
+  z-index: 3000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(5px);
 }
 
-.idea-category {
-  background-color: rgba(0, 212, 255, 0.1);
-  color: var(--accent-color);
-  padding: 5px 12px;
-  border-radius: 15px;
-  font-size: 0.85rem;
-  font-weight: 600;
+.idea-modal-content {
+  background-color: var(--bg-primary); width: 100%; max-width: 1000px; max-height: 90vh;
+  border-radius: 15px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; border: 1px solid var(--border-color);
 }
 
-.idea-content h3 {
-  margin: 0 0 10px 0;
-  color: var(--text-primary);
-  font-size: 1.3rem;
+.lightbox-close-btn {
+  position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none;
+  color: white; font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%;
+  cursor: pointer; z-index: 10; display: flex; justify-content: center; align-items: center; transition: background 0.2s;
+}
+.lightbox-close-btn:hover { background: var(--accent-color); }
+
+.idea-modal-header-section {
+  padding: 30px; background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+}
+.idea-modal-header-section h2 { margin: 15px 0 10px 0; font-size: 1.8rem; color: var(--text-primary); }
+.idea-modal-header-section p { color: var(--text-secondary); font-size: 1.05rem; line-height: 1.6; margin: 0 0 15px 0; }
+.idea-modal-author { font-size: 0.9rem; color: var(--text-secondary); }
+.idea-modal-author strong { color: var(--text-primary); }
+
+.implementations-section {
+  padding: 30px; overflow-y: auto; flex-grow: 1;
+}
+.implementations-section h3 { margin: 0; color: var(--text-primary); font-size: 1.4rem; }
+
+.impl-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;
 }
 
-.idea-content p {
-  color: var(--text-secondary);
-  line-height: 1.6;
+.impl-card {
+  background-color: var(--bg-secondary); border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color);
 }
-
-.idea-footer {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+.impl-image-wrapper {
+  width: 100%; aspect-ratio: 1 / 1; background-color: #000; overflow: hidden;
 }
-
-.action-btn {
-  background: none;
-  border: 1px solid var(--border-color);
-  color: var(--accent-color);
-  padding: 8px 15px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
+.impl-image-wrapper img {
+  width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;
 }
+.impl-card:hover .impl-image-wrapper img { transform: scale(1.05); }
 
-.action-btn:hover {
-  background-color: var(--accent-color);
-  color: #fff;
+.impl-info {
+  padding: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;
 }
+.impl-author { font-weight: bold; color: var(--text-primary); }
+.impl-likes { display: flex; align-items: center; gap: 5px; color: var(--text-secondary); font-weight: bold; }
 
-/* --- MODAL (FELUGRÓ ABLAK) STÍLUSOK --- */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
+/* ========================================= */
+/* ÚJ ÖTLET LÉTREHOZÁSA MODAL                */
+/* ========================================= */
+.create-idea-modal {
+  background-color: var(--bg-primary);
   width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7); /* Sötétítés a háttérben */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s;
-}
-
-.modal-content {
-  background-color: var(--bg-secondary);
-  padding: 30px;
+  max-width: 600px;
+  padding: 40px;
   border-radius: 15px;
-  width: 90%;
-  max-width: 500px;
   position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
   border: 1px solid var(--border-color);
 }
 
-.close-modal-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.modal-title {
-  text-align: center;
-  margin-bottom: 20px;
+.create-idea-modal h2 {
+  margin-top: 0;
   color: var(--text-primary);
+  font-size: 1.8rem;
 }
 
-.modal-form .form-group {
-  margin-bottom: 15px;
+.create-idea-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.modal-form label {
-  display: block;
-  margin-bottom: 5px;
+.create-idea-form label {
+  font-weight: bold;
   color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
-.modal-form input,
-.modal-form textarea,
-.modal-form select {
+.create-idea-form input,
+.create-idea-form select,
+.create-idea-form textarea {
   width: 100%;
-  padding: 10px;
+  padding: 12px 15px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   color: var(--text-primary);
   font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
 }
 
-.submit-idea-btn {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
+.create-idea-form input:focus,
+.create-idea-form select:focus,
+.create-idea-form textarea:focus {
+  border-color: #00d2ff;
 }
 
-.submit-idea-btn:hover {
-  opacity: 0.9;
+/* ========================================= */
+/* KÉP LIGHTBOX (Ahogy a Galériában)         */
+/* ========================================= */
+.lightbox-content {
+  display: flex; flex-direction: row; flex-wrap: nowrap;
+  background-color: var(--bg-secondary); width: 100%; max-width: 1400px; height: 90vh; 
+  border-radius: 15px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  position: relative; border: 1px solid var(--border-color);
 }
-
-/* --- MODAL (FELUGRÓ ABLAK) STÍLUSOK --- */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7); /* Sötétítés a háttérben */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s;
+.lightbox-left {
+  flex: 1 1 auto; min-width: 0; min-height: 0; background-color: #000; 
+  display: flex; justify-content: center; align-items: center; padding: 20px;
 }
-
-.modal-content {
-  background-color: var(--bg-secondary);
-  padding: 30px;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 500px;
-  position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  border: 1px solid var(--border-color);
+.lightbox-left img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.lightbox-right {
+  flex: 0 0 400px; width: 400px; max-width: 400px; display: flex; flex-direction: column;
+  background-color: var(--bg-primary); border-left: 1px solid var(--border-color);
 }
-
-.close-modal-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.modal-title {
-  text-align: center;
-  margin-bottom: 20px;
-  color: var(--text-primary);
-}
-
-.modal-form .form-group {
-  margin-bottom: 15px;
-}
-
-.modal-form label {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--text-secondary);
-}
-
-.modal-form input,
-.modal-form textarea,
-.modal-form select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: inherit;
-}
-
-.submit-idea-btn {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.submit-idea-btn:hover {
-  opacity: 0.9;
-}
+.lightbox-header { padding: 25px 20px 20px; border-bottom: 1px solid var(--border-color); }
+.lightbox-title { margin: 0 0 10px 0; color: var(--text-primary); font-size: 1.5rem; }
+.lightbox-description { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0; }
+.lightbox-comments { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: var(--bg-secondary); }
+.lightbox-footer { padding: 20px; border-top: 1px solid var(--border-color); background-color: var(--bg-primary); }

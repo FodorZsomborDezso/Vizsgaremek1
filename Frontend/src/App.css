@@ -46,3 +46,35 @@ body {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* ========================================= */
+/* FELUGRÓ ABLAKOK LÁGY ANIMÁCIÓJÁ             */
+/* ========================================= */
+
+/* 1. A sötét háttér finom megjelenése */
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. Az ablak beúszása (kicsit lentről, picit felnagyítva) */
+@keyframes slideUpModal {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+.lightbox-content, 
+.idea-modal-content, 
+.create-idea-modal {
+  /* A meglévő kódod... */
+  background-color: var(--bg-secondary);
+  /* ... */
+
+  /* 🔥 ÚJ: Ezt a sort add hozzá! (A cubic-bezier adja azt a szép, ruganyos megállást) */
+  animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

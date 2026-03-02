@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom';
 import { 
   FaEye, FaSun, FaMoon, 
   FaLightbulb, FaImages, FaUpload, 
-  FaHome, FaUserCircle, FaShieldAlt // <--- 1. ÚJ IKON IMPORTÁLVA
+  FaHome, FaUserCircle, FaShieldAlt, // <--- 1. ÚJ IKON IMPORTÁLVA
+  FaShare,
+  FaCircle,
+  FaInbox,
+  FaInfoCircle
 } from 'react-icons/fa';
 import './Header.css';
 
@@ -59,6 +63,18 @@ const Header = ({ theme, toggleTheme }) => {
             <li className="nav-item">
               <Link to="/ideas" className="nav-link" onClick={closeMobileMenu}>
                 <FaLightbulb style={{marginRight:'5px'}}/> Ötletbörze
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link to="/about" className="nav-link" onClick={closeMobileMenu}>
+                <FaInfoCircle style={{marginRight:'5px'}}/> Rólunk
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link to="/feedback" className="nav-link" onClick={closeMobileMenu}>
+                <FaShare style={{marginRight:'5px'}}/> Visszajelzés
               </Link>
             </li>
 

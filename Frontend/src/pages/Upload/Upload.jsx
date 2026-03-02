@@ -1,169 +1,211 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaCloudUploadAlt, FaImage } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FaCloudUploadAlt, FaImage, FaTimes, FaCheckCircle, FaLightbulb } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import './Upload.css'; // Használhatod a meglévő CSS-edet, ha van
+import './Upload.css';
 
 const Upload = () => {
   const navigate = useNavigate();
-  
-  // --- ÁLLAPOTOK ---
+  const location = useLocation();
+  const fileInputRef = useRef(null);
+
+  // Állapotok
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState(1);
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null); // Kép előnézethez
+  const [categoryId, setCategoryId] = useState('1');
+  const [ideaId, setIdeaId] = useState(null);
+  
+  // Kép kezelése
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Kategóriák (Ezek egyeznek a DB-ben lévőkkel: 1-Természet, 2-Város, stb.)
-  const categories = [
-    { id: 1, name: 'Természet' },
-    { id: 2, name: 'Város' },
-    { id: 3, name: 'Tech' },
-    { id: 4, name: 'Digitális Art' },
-    { id: 5, name: 'Design' }
-  ];
+  const categories = ['Természet', 'Város', 'Tech', 'Digitális Art', 'Design'];
+  const categoryMap = { 'Természet': 1, 'Város': 2, 'Tech': 3, 'Digitális Art': 4, 'Design': 5 };
 
-  // Ellenőrizzük, hogy be van-e lépve
+  // Megnézzük, hogy az Ötletbörzéből jött-e a felhasználó
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.info('A feltöltéshez be kell jelentkezned!');
-      navigate('/login');
+    const searchParams = new URLSearchParams(location.search);
+    const idea = searchParams.get('idea_id');
+    if (idea) {
+      setIdeaId(idea);
+      toast.info("💡 Szuper! Egy létező ötletet valósítasz meg!");
     }
-  }, [navigate]);
+  }, [location]);
 
-  // Fájl kiválasztásának kezelése (és előnézet generálása)
+  // --- KÉP KEZELÉSE (Drag & Drop + Tallózás) ---
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      // Kép előnézet URL generálása a memóriában
-      setPreviewUrl(URL.createObjectURL(selectedFile));
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      toast.error("Kérlek, csak érvényes képfájlt (JPG, PNG) tölts fel!");
     }
   };
 
-  // --- ŰRLAP KÜLDÉSE (A VARÁZSLAT ITT TÖRTÉNIK) ---
+  const onDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      toast.error("Kérlek, csak érvényes képfájlt (JPG, PNG) tölts fel!");
+    }
+  };
+
+  const clearImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // --- ŰRLAP BEKÜLDÉSE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedFile) return toast.warning("Kérlek, válassz ki egy képet a feltöltéshez!");
+    if (!title.trim()) return toast.warning("A cím megadása kötelező!");
 
-    if (!title || !file) {
-      toast.warning("Cím és kép megadása kötelező!");
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error("A feltöltéshez be kell jelentkezned!");
+      navigate('/login');
       return;
     }
 
     setLoading(true);
 
-    // 1. Készítünk egy "virtuális csomagot" (FormData) a fájlnak és a szövegeknek
     const formData = new FormData();
+    formData.append('image', selectedFile);
     formData.append('title', title);
     formData.append('description', description);
     formData.append('category_id', categoryId);
-    
-    // FIGYELEM: Ennek a neve 'image' kell legyen, mert a backend ezt várja: upload.single('image')
-    formData.append('image', file); 
-
-    const token = localStorage.getItem('token');
+    if (ideaId) {
+      formData.append('idea_id', ideaId);
+    }
 
     try {
-      const response = await fetch('http://localhost:3000/api/posts', {
+      const res = await fetch('http://localhost:3000/api/posts', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-          // NAGYON FONTOS: Ide TILOS beírni a 'Content-Type': 'application/json'-t! 
-          // A böngésző automatikusan beállítja a 'multipart/form-data'-t a fájlok miatt.
-        },
-        body: formData // A csomagot küldjük
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData // A fetch automatikusan beállítja a multipart/form-data headert!
       });
 
-      if (response.ok) {
-        toast.success("Kép sikeresen feltöltve!");
-        navigate('/gallery'); // Feltöltés után átvisszük a galériába
+      if (res.ok) {
+        toast.success("Alkotásod sikeresen feltöltve! 🎉");
+        navigate('/gallery'); // Sikeres feltöltés után visszadobjuk a galériába
       } else {
-        const data = await response.json();
-        toast.error(data.error || "Hiba a feltöltéskor.");
+        const errData = await res.json();
+        toast.error(errData.error || "Hiba történt a feltöltés során.");
       }
-    } catch (error) {
-      console.error("Hiba:", error);
-      toast.error("Nem sikerült kapcsolódni a szerverhez.");
+    } catch (err) {
+      toast.error("Szerver hiba.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="upload-container" style={{ maxWidth: '600px', margin: '40px auto', padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', color: 'var(--text-primary)' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-        <FaCloudUploadAlt style={{ color: 'var(--accent-color)' }} /> Új Alkotás Feltöltése
-      </h1>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div className="upload-page-container">
+      <div className="upload-content-wrapper">
         
-        {/* KÉP KIVÁLASZTÁSA */}
-        <div style={{ border: '2px dashed var(--border-color)', padding: '20px', borderRadius: '8px', textAlign: 'center', position: 'relative' }}>
-          {previewUrl ? (
-            <div style={{ position: 'relative' }}>
-              <img src={previewUrl} alt="Előnézet" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', objectFit: 'contain' }} />
-              <button 
-                type="button" 
-                onClick={() => { setFile(null); setPreviewUrl(null); }}
-                style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(231, 76, 60, 0.8)', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}
-              >
-                Mégse
-              </button>
+        <div className="upload-header">
+          <h1>Új alkotás feltöltése <FaImage style={{ color: '#00d2ff' }} /></h1>
+          <p>Oszd meg a legújabb munkádat a közösséggel!</p>
+          {ideaId && (
+            <div className="idea-implementation-badge">
+              <FaLightbulb /> Egy közösségi ötletet valósítasz meg
             </div>
-          ) : (
-            <>
-              <FaImage style={{ fontSize: '3rem', color: 'var(--text-secondary)', marginBottom: '10px' }} />
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '10px' }}>Kattints ide, vagy húzd ide a képet!</p>
-              <input 
-                type="file" 
-                accept="image/png, image/jpeg, image/webp" 
-                onChange={handleFileChange} 
-                required 
-                style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, opacity: 0, cursor: 'pointer' }}
-              />
-            </>
           )}
         </div>
 
-        {/* ŰRLAP MEZŐK */}
-        <input 
-          type="text" 
-          placeholder="Alkotás címe *" 
-          value={title} 
-          onChange={(e) => setTitle(e.target.value)} 
-          required 
-          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-        />
+        <form onSubmit={handleSubmit} className="upload-form-layout">
+          
+          {/* BAL OLDAL: KÉP FELTÖLTÉSE (Drag & Drop) */}
+          <div className="upload-left-side">
+            {!previewUrl ? (
+              <div 
+                className={`drag-drop-zone ${isDragging ? 'dragging' : ''}`}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current.click()}
+              >
+                <FaCloudUploadAlt className="upload-icon-large" />
+                <h3>Húzd ide a képet!</h3>
+                <p>Vagy kattints a böngészéshez (JPG, PNG)</p>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  style={{ display: 'none' }} 
+                />
+              </div>
+            ) : (
+              <div className="image-preview-container">
+                <img src={previewUrl} alt="Előnézet" className="image-preview" />
+                <button type="button" className="remove-image-btn" onClick={clearImage}>
+                  <FaTimes /> Másik kép választása
+                </button>
+              </div>
+            )}
+          </div>
 
-        <select 
-          value={categoryId} 
-          onChange={(e) => setCategoryId(e.target.value)}
-          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-        >
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
-          ))}
-        </select>
+          {/* JOBB OLDAL: ADATOK MEGADÁSA */}
+          <div className="upload-right-side">
+            <div className="form-group">
+              <label>Kategória</label>
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="modern-input">
+                {categories.map(cat => (
+                  <option key={cat} value={categoryMap[cat]}>{cat}</option>
+                ))}
+              </select>
+            </div>
 
-        <textarea 
-          placeholder="Oszd meg a gondolataidat a képről (opcionális)..." 
-          value={description} 
-          onChange={(e) => setDescription(e.target.value)} 
-          rows="4"
-          style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'vertical' }}
-        />
+            <div className="form-group">
+              <label>Alkotás címe</label>
+              <input 
+                type="text" 
+                placeholder="Adj egy találó nevet a képednek..." 
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)} 
+                required 
+                className="modern-input"
+              />
+            </div>
 
-        <button 
-          type="submit" 
-          disabled={loading || !file}
-          style={{ padding: '15px', borderRadius: '8px', border: 'none', backgroundColor: (loading || !file) ? 'var(--text-secondary)' : 'var(--accent-color)', color: 'white', fontSize: '1.1rem', fontWeight: 'bold', cursor: (loading || !file) ? 'not-allowed' : 'pointer', transition: '0.3s' }}
-        >
-          {loading ? 'Feltöltés folyamatban...' : 'Megosztás a közösséggel'}
-        </button>
+            <div className="form-group">
+              <label>Leírás (opcionális)</label>
+              <textarea 
+                rows="6" 
+                placeholder="Milyen technikával készült? Mi inspirált? Meséld el a történetét!" 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)}
+                className="modern-input"
+              ></textarea>
+            </div>
 
-      </form>
+            <button type="submit" className="submit-upload-btn" disabled={loading || !selectedFile}>
+              {loading ? 'Feltöltés folyamatban...' : <><FaCheckCircle style={{ marginRight: '8px' }} /> Közzététel</>}
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 };

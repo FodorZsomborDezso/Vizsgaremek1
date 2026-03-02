@@ -13,6 +13,8 @@ import Upload from './pages/Upload/Upload';
 import Ideas from './pages/Ideas/Ideas';
 import Admin from './pages/Admin/Admin';
 import PublicProfile from './pages/Profile/PublicProfile';
+import About from './pages/About/About';
+import Feedback from './pages/Feedback/Feedback';
 
 import Login from './pages/RegisterAndLogin/Login';
 import Register from './pages/RegisterAndLogin/Register';
@@ -50,6 +52,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="*" element={<h1>404</h1>} />
         </Routes>
       </main>

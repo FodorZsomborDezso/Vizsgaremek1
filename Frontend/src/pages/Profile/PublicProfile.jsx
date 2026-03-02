@@ -1,159 +1,241 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaUserPlus, FaUserCheck, FaMapMarkerAlt, FaUserCircle, FaEnvelope } from 'react-icons/fa';
-import './Profile.css';
+import { FaMapMarkerAlt, FaUserPlus, FaUserCheck, FaEnvelope, FaUserCircle, FaHeart, FaTimes, FaPaperPlane } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import './PublicProfile.css';
 
 const PublicProfile = () => {
-  const { username } = useParams(); 
+  const { username } = useParams(); // Kiveszi a linkből a nevet (pl. /user/BongyaSpob -> BongyaSpob)
   const navigate = useNavigate();
-  
-  const [profileData, setProfileData] = useState(null);
+
+  const [profileUser, setProfileUser] = useState(null);
   const [posts, setPosts] = useState([]);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Csak azt nézzük meg, be van-e lépve valaki (gomb megjelenítéséhez)
-  const isLoggedIn = !!localStorage.getItem('token');
+  // Követés állapotok
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+
+  // Üzenetküldés (Modal) állapotok
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  // Kép nagyítása (Lightbox)
+  const [selectedPost, setSelectedPost] = useState(null);
+
+  const loggedInUserStr = localStorage.getItem('user');
+  const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
 
   useEffect(() => {
-    // 1. Megnézzük, ki van belépve (Csak a useEffect-en BELÜL, így nincs végtelen ciklus!)
-    const userStr = localStorage.getItem('user');
-    const currentUser = userStr ? JSON.parse(userStr) : null;
-
-    // Ha a saját nevedre kattintasz, vigyen a saját profilodra!
-    if (currentUser && currentUser.username === username) {
+    // Ha a saját profiljára kattintott, dobjuk át a /profile oldalra!
+    if (loggedInUser && loggedInUser.username === username) {
       navigate('/profile');
       return;
     }
 
-    setLoading(true);
-    
-    // 2. Profil adatainak betöltése
-    fetch(`http://localhost:3000/api/users/${username}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Felhasználó nem található");
-        return res.json();
-      })
-      .then(data => {
-        setProfileData(data.user);
-        setPosts(data.posts);
-        
-        // Ha be vagyunk lépve, megnézzük, követjük-e
-        const token = localStorage.getItem('token');
-        if (token && currentUser) {
-          fetch(`http://localhost:3000/api/users/${data.user.id}/is-following`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          .then(res => res.json())
-          .then(followData => setIsFollowing(followData.isFollowing))
-          .catch(err => console.error(err));
+    const fetchProfile = async () => {
+      try {
+        // 1. Felhasználó és posztok letöltése
+        const res = await fetch(`http://localhost:3000/api/users/${username}`);
+        if (!res.ok) {
+          toast.error("Felhasználó nem található!");
+          navigate('/');
+          return;
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setProfileData(null);
-        setLoading(false);
-      });
-  }, [username, navigate]); // <--- INNEN KIVETTÜK A FOLYAMATOS FIGYELÉST!
+        const data = await res.json();
+        setProfileUser(data.user);
+        setPosts(data.posts);
+        setFollowersCount(data.user.followers_count);
 
+        // 2. Ha be vagyunk jelentkezve, megnézzük, követjük-e már
+        const token = localStorage.getItem('token');
+        if (token && data.user) {
+          const followRes = await fetch(`http://localhost:3000/api/users/${data.user.id}/is-following`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (followRes.ok) {
+            const followData = await followRes.json();
+            setIsFollowing(followData.isFollowing);
+          }
+        }
+      } catch (err) {
+        console.error("Hiba a profil betöltésekor:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [username, navigate, loggedInUser]);
+
+  // --- KÖVETÉS GOMB ---
   const handleFollowToggle = async () => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      toast.info("Be kell jelentkezned a követéshez!");
-      return;
-    }
+    if (!token) return toast.info("A követéshez be kell jelentkezned!");
 
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${profileData.id}/follow`, {
+      const res = await fetch(`http://localhost:3000/api/users/${profileUser.id}/follow`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await res.json();
-      
       if (res.ok) {
+        const data = await res.json();
         setIsFollowing(data.followed);
-        setProfileData({
-          ...profileData,
-          followers_count: data.followed ? profileData.followers_count + 1 : profileData.followers_count - 1
-        });
+        setFollowersCount(prev => data.followed ? prev + 1 : prev - 1);
+        toast.success(data.followed ? `Mostantól követed őt: @${profileUser.username}!` : "Követés leállítva.");
       }
-    } catch (error) {
-      console.error("Hiba a követésnél:", error);
+    } catch (err) {
+      toast.error("Szerver hiba a követésnél.");
     }
   };
 
-  if (loading) return <div style={{textAlign: 'center', marginTop: '50px', color: 'var(--text-primary)'}}>Betöltés...</div>;
-  if (!profileData) return <div style={{textAlign: 'center', marginTop: '50px', color: 'var(--text-primary)'}}><h2>Ez a felhasználó nem létezik.</h2></div>;
+  // --- ÜZENET KÜLDÉSE ---
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!messageContent.trim()) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return toast.info("Üzenetküldéshez be kell jelentkezned!");
+
+    setIsSending(true);
+    try {
+      const res = await fetch(`http://localhost:3000/api/messages/${profileUser.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ content: messageContent })
+      });
+
+      if (res.ok) {
+        toast.success("Üzenet sikeresen elküldve! ✉️");
+        setIsMessageModalOpen(false);
+        setMessageContent('');
+      } else {
+        toast.error("Hiba az üzenet küldésekor.");
+      }
+    } catch (err) {
+      toast.error("Szerver hiba.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (loading) return <div className="loading-spinner">Profil betöltése...</div>;
+  if (!profileUser) return <div className="empty-state">Felhasználó nem található.</div>;
 
   return (
-    <div className="profile-container">
-      {/* PROFIL FEJLÉC */}
-      <div className="profile-card">
-        <div className="cover-photo"></div>
-        <div className="profile-content">
-          {profileData.avatar_url ? (
-            <img src={profileData.avatar_url} alt="Avatar" className="avatar" />
-          ) : (
-            <div className="avatar" style={{display:'flex', justifyContent:'center', alignItems:'center', fontSize:'3rem', background: 'var(--bg-secondary)', color: 'var(--text-secondary)'}}>
-              <FaUserCircle />
-            </div>
-          )}
+    <div className="public-profile-container">
+      
+      {/* --- FEJLÉC ÉS ADATLAP --- */}
+      <div className="public-profile-card">
+        <div className="public-cover-photo"></div>
+        
+        <div className="public-profile-content">
+          <div className="public-avatar-wrapper">
+            {profileUser.avatar_url && profileUser.avatar_url.includes('http') ? (
+              <img src={profileUser.avatar_url} alt="Avatar" className="public-avatar" />
+            ) : (
+              <div className="public-avatar avatar-placeholder"><FaUserCircle /></div>
+            )}
+          </div>
           
-          <div className="profile-name-section">
-            <h1 className="profile-name">{profileData.full_name || profileData.username}</h1>
-            <p className="profile-username">@{profileData.username}</p>
+          <div className="public-name-section">
+            <h1 className="public-name">{profileUser.full_name || profileUser.username}</h1>
+            <p className="public-username">@{profileUser.username}</p>
           </div>
 
-          <p className="profile-bio">{profileData.bio || "Még nem írt bemutatkozást."}</p>
+          <p className="public-bio">{profileUser.bio || "Ez a felhasználó még nem írt magáról."}</p>
           
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '15px' }}>
-            <span><FaMapMarkerAlt /> {profileData.location || "Ismeretlen hely"}</span>
-            <span>Csatlakozott: {new Date(profileData.created_at).toLocaleDateString()}</span>
+          <div className="public-info-row">
+            <span><FaMapMarkerAlt /> {profileUser.location || "Ismeretlen hely"}</span>
           </div>
 
-          
-          {isLoggedIn && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '20px' }}>
-              <button 
-                onClick={handleFollowToggle}
-                style={{ backgroundColor: isFollowing ? 'var(--bg-secondary)' : 'var(--accent-color)', color: isFollowing ? 'var(--text-primary)' : 'white', border: isFollowing ? '1px solid var(--border-color)' : 'none', padding: '10px 25px', borderRadius: '25px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease' }}
-              >
-                {isFollowing ? <><FaUserCheck /> Követed</> : <><FaUserPlus /> Követés</>}
-              </button>
+          {/* AKCIÓ GOMBOK (Követés és Üzenet) */}
+          <div className="public-action-buttons">
+            <button 
+              onClick={handleFollowToggle} 
+              className={`follow-btn ${isFollowing ? 'following' : ''}`}
+            >
+              {isFollowing ? <><FaUserCheck /> Követed</> : <><FaUserPlus /> Követés</>}
+            </button>
+            <button onClick={() => setIsMessageModalOpen(true)} className="message-btn">
+              <FaEnvelope /> Üzenet
+            </button>
+          </div>
 
-              {/* ÚJ: ÜZENETKÜLDÉS GOMB */}
-              <button 
-                onClick={() => navigate(`/chat/${profileData.id}`, { state: { username: profileData.username, avatar: profileData.avatar_url } })}
-                style={{ backgroundColor: '#3498db', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '25px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.3s ease' }}
-              >
-                <FaEnvelope /> Üzenet
-              </button>
-            </div>
-          )}
-
-          <div className="profile-stats">
+          {/* STATISZTIKÁK */}
+          <div className="public-stats">
             <div className="stat-item"><span className="stat-value">{posts.length}</span><span className="stat-label">Poszt</span></div>
-            <div className="stat-item"><span className="stat-value">{profileData.followers_count || 0}</span><span className="stat-label">Követő</span></div>
-            <div className="stat-item"><span className="stat-value">{profileData.following_count || 0}</span><span className="stat-label">Követett</span></div>
+            <div className="stat-item"><span className="stat-value">{followersCount}</span><span className="stat-label">Követő</span></div>
+            <div className="stat-item"><span className="stat-value">{profileUser.following_count}</span><span className="stat-label">Követett</span></div>
           </div>
         </div>
       </div>
 
-      {/* GALÉRIA RÁCS */}
-      <h3 style={{textAlign: 'center', margin: '30px 0 15px', color: 'var(--text-primary)'}}>@{profileData.username} alkotásai</h3>
-      <div className="gallery-grid">
+      {/* --- GALÉRIA --- */}
+      <h3 className="public-gallery-title">@{profileUser.username} alkotásai</h3>
+      <div className="public-gallery-grid">
         {posts.length > 0 ? (
           posts.map(post => (
-            <div key={post.id} className="gallery-item">
-              <img src={post.image_url} alt={post.title} style={{objectFit: 'cover', width: '100%', height: '100%'}} />
+            <div key={post.id} className="public-gallery-item" onClick={() => setSelectedPost(post)}>
+              <img src={post.image_url} alt={post.title} loading="lazy" />
+              <div className="overlay">
+                <span className="img-title">{post.title}</span>
+                <span className="img-likes"><FaHeart style={{color: '#ff4757', marginRight: '5px'}}/> {post.like_count || 0}</span>
+              </div>
             </div>
           ))
         ) : (
           <div className="empty-state">Még nem töltött fel képet.</div>
         )}
       </div>
+
+      {/* ========================================= */}
+      {/* 🔥 ÜZENETKÜLDÉS MODAL 🔥                  */}
+      {/* ========================================= */}
+      {isMessageModalOpen && (
+        <div className="public-modal-overlay" onClick={() => setIsMessageModalOpen(false)}>
+          <div className="public-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Üzenet küldése</h2>
+              <button onClick={() => setIsMessageModalOpen(false)} className="close-btn"><FaTimes /></button>
+            </div>
+            <div style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>
+              Címzett: <strong style={{color: 'var(--text-primary)'}}>@{profileUser.username}</strong>
+            </div>
+            <form onSubmit={handleSendMessage}>
+              <textarea 
+                rows="5" 
+                placeholder="Írd meg az üzeneted..." 
+                value={messageContent} 
+                onChange={(e) => setMessageContent(e.target.value)}
+                required
+                className="modern-textarea"
+              ></textarea>
+              <button type="submit" disabled={isSending || !messageContent.trim()} className="send-message-submit-btn">
+                {isSending ? 'Küldés...' : <><FaPaperPlane style={{marginRight: '8px'}}/> Küldés</>}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================= */}
+      {/* 🔥 KÉP LIGHTBOX (Nagyítás) 🔥             */}
+      {/* ========================================= */}
+      {selectedPost && (
+        <div className="public-modal-overlay" onClick={() => setSelectedPost(null)}>
+          <div className="lightbox-image-only-content" onClick={e => e.stopPropagation()}>
+            <button className="close-btn absolute-close" onClick={() => setSelectedPost(null)}><FaTimes /></button>
+            <img src={selectedPost.image_url} alt={selectedPost.title} className="lightbox-large-img" />
+            <div className="lightbox-image-info">
+              <h2>{selectedPost.title}</h2>
+              {selectedPost.description && <p>{selectedPost.description}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

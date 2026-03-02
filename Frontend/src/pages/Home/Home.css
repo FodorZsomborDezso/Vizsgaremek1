@@ -1,340 +1,279 @@
-/* --- Változók és Alapok --- */
-/* FONTOS: Töröltük innen a saját :root változókat!
-   Mostantól az App.css globális változóit használjuk. */
-
-.home-wrapper {
-  /* A szövegszín és háttérszín öröklődik az App.css-ből */
-  animation: fadeIn 0.8s ease-in-out;
+.home-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  overflow: hidden;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ========================================= */
+/* HERO SZEKCIÓ                              */
+/* ========================================= */
+.home-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 70vh;
+  gap: 50px;
+  margin-bottom: 80px;
 }
 
-/* --- 1. HERO SZEKCIÓ --- */
-.hero-section {
-  text-align: center;
-  padding: 80px 20px;
-  /* A gradiens most már átlátszó, így átüt alatta a téma háttérszíne */
-  background: linear-gradient(180deg, transparent 0%, rgba(0,212,255,0.05) 100%);
-  border-bottom: 1px solid var(--border-color); /* Globális változó */
-}
-
-.hero-content h1 {
-  font-size: 3.5rem;
-  margin-bottom: 20px;
-  line-height: 1.2;
-  color: var(--text-primary); /* Globális változó */
-}
-
-.highlight-text {
-  background: linear-gradient(90deg, var(--accent-color), #005f73);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.hero-content p {
-  font-size: 1.2rem;
-  color: var(--text-secondary); /* Globális változó a jobb olvashatóságért */
+.hero-text-content {
+  flex: 1;
   max-width: 600px;
-  margin: 0 auto 40px auto;
+  animation: slideInLeft 0.8s ease forwards;
+}
+
+.hero-title {
+  font-size: 4rem;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+.hero-title span {
+  color: transparent;
+  background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 40px;
 }
 
 .hero-buttons {
   display: flex;
-  justify-content: center;
   gap: 20px;
 }
 
-/* Gomb stílusok */
-.btn {
-  padding: 12px 30px;
-  border-radius: 30px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
 .btn-primary {
-  background-color: var(--accent-color); /* Globális változó */
-  color: var(--bg-primary); /* A gomb szövege legyen a háttér színe a kontrasztért */
+  background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+  color: white;
+  padding: 15px 35px;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
-  filter: brightness(1.1);
-}
-
-.btn-outline {
-  border: 2px solid var(--accent-color);
-  color: var(--accent-color);
-}
-
-.btn-outline:hover {
-  background-color: rgba(0, 212, 255, 0.1);
+  box-shadow: 0 15px 25px rgba(0, 210, 255, 0.5);
+  color: white;
 }
 
 .btn-secondary {
-  background-color: var(--bg-secondary); /* Kártya háttérszín */
+  background-color: transparent;
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
+  padding: 15px 35px;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.3s;
 }
 
 .btn-secondary:hover {
-  background-color: var(--accent-color);
-  color: var(--bg-primary);
-  border-color: var(--accent-color);
+  border-color: #00d2ff;
+  color: #00d2ff;
 }
 
-/* --- 2. FEATURES (NAVIGÁCIÓS KÁRTYÁK) --- */
-.features-section {
-  padding: 60px 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: var(--bg-primary); /* Alap háttérszín */
-}
-
-.features-section h2, .trending-section h2 {
-  text-align: center;
-  margin-bottom: 40px;
-  font-size: 2rem;
-  color: var(--text-primary);
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 30px;
-}
-
-.feature-card {
-  background-color: var(--bg-secondary); /* FONTOS: Ez a kártya háttérszíne! */
-  padding: 30px;
-  border-radius: 15px;
-  text-align: center;
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* Enyhe árnyék, hogy kiemelkedjen világos módban is */
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
-.feature-card h3 {
-    color: var(--text-primary);
-}
-
-.feature-card p {
-    color: var(--text-secondary);
-}
-
-.feature-card:hover {
-  transform: translateY(-10px);
-  border-color: var(--accent-color);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.icon-container {
-  background-color: rgba(0, 212, 255, 0.1);
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
-  transition: background-color 0.3s ease;
-}
-
-.feature-card:hover .icon-container {
-  background-color: var(--accent-color);
-}
-
-.feature-icon {
-  font-size: 2.5rem;
-  color: var(--accent-color);
-  transition: color 0.3s ease;
-}
-
-.feature-card:hover .feature-icon {
-  /* Hoverkor a téma háttérszínét veszi fel a kontraszt miatt */
-  color: var(--bg-primary); 
-}
-
-.text-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 15px;
-  color: var(--accent-color);
-  font-weight: bold;
-  transition: gap 0.2s ease;
-}
-
-.text-link:hover {
-  gap: 5px;
-  text-decoration: underline;
-}
-
-/* --- 3. TRENDING GALÉRIA --- */
-.trending-section {
-  padding: 60px 20px;
-  /* FONTOS: Fix sötét szín helyett a másodlagos háttérszínt használjuk */
-  background-color: var(--bg-secondary); 
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.section-header p {
-  color: var(--text-secondary); /* Globális változó */
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto 40px auto;
-}
-
-.gallery-item {
+/* ========================================= */
+/* DINAMIKUS FOTÓKOLLÁZS                     */
+/* ========================================= */
+.hero-image-collage {
+  flex: 1;
   position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  height: 250px;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  height: 600px;
+  width: 100%;
+  animation: fadeInRight 1s ease forwards;
 }
 
-.gallery-item img {
+.collage-img {
+  position: absolute;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  transition: transform 0.4s ease;
+  border: 4px solid var(--bg-primary); /* Szép keret a lebegéshez */
+}
+
+.collage-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  display: block;
 }
 
-.gallery-item:hover img {
-  transform: scale(1.1);
+.collage-img:hover {
+  transform: scale(1.05) translateY(-10px);
+  z-index: 10;
 }
 
-.overlay {
+.img-credit {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
   padding: 15px;
-  /* A szöveg mindig fehér legyen a sötét overlay-en */
-  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-  color: white; 
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s;
+}
+
+.collage-img:hover .img-credit { opacity: 1; }
+
+/* A 3 kép aszimmetrikus elrendezése */
+.img-main {
+  width: 350px;
+  height: 480px;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.img-sub-top {
+  width: 280px;
+  height: 250px;
+  top: 20px;
+  right: 20px;
+  z-index: 1;
+}
+
+.img-sub-bottom {
+  width: 250px;
+  height: 280px;
+  bottom: 20px;
+  right: 50px;
+  z-index: 3;
+}
+
+.collage-loading, .collage-empty {
+  height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.gallery-item:hover .overlay {
-  opacity: 1;
-}
-
-.img-title {
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-.img-user {
-  font-size: 0.9rem;
-  color: var(--accent-color);
-}
-
-.center-btn {
+  justify-content: center;
+  align-items: center;
+  color: var(--text-secondary);
+  border: 2px dashed var(--border-color);
+  border-radius: 20px;
+  padding: 30px;
   text-align: center;
 }
 
-/* --- MOBIL NÉZET --- */
-@media (max-width: 768px) {
-  .hero-content h1 {
-    font-size: 2.5rem;
-  }
-  
-  .hero-buttons {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-    box-sizing: border-box;
-  }
+/* ========================================= */
+/* JELLEMZŐK SZEKCIÓ (Kártyák)               */
+/* ========================================= */
+.home-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  padding: 40px 0;
 }
-/* --- LIGHTBOX (KÉPNÉZEGETŐ) --- */
-.lightbox-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.85); /* Erős sötétítés */
+
+.feature-card {
+  background-color: var(--bg-secondary);
+  padding: 40px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.feature-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000; /* Legyen minden felett! */
-  animation: fadeIn 0.3s ease;
-  padding: 20px;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
 }
 
-.lightbox-close {
-  position: absolute;
-  top: 20px;
-  right: 30px;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 2rem;
-  cursor: pointer;
-  z-index: 2001;
-}
-
-.lightbox-content {
-  background-color: var(--bg-primary);
-  border-radius: 12px;
-  overflow: hidden;
-  max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
-}
-
-.lightbox-img {
-  width: 100%;
-  height: auto;
-  max-height: 65vh; /* A kép ne lógjon ki a képernyőről */
-  object-fit: contain;
-  background-color: #000; /* Ha nem tölti ki teljesen, fekete legyen alatta */
-}
-
-.lightbox-info {
-  padding: 20px;
+.feature-card h3 {
+  font-size: 1.5rem;
   color: var(--text-primary);
+  margin-bottom: 15px;
 }
 
-.lightbox-author {
-  display: flex;
+.feature-card p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.feature-link {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-  color: var(--accent-color);
+  gap: 8px;
+  color: #00d2ff;
   font-weight: bold;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: gap 0.2s;
 }
 
-.lightbox-author img {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+.feature-card:hover .feature-link {
+  gap: 12px; /* A kis nyíl megmozdul hoverre */
+}
+
+/* ========================================= */
+/* ANIMÁCIÓK ÉS RESZPONZIVITÁS               */
+/* ========================================= */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 1024px) {
+  .hero-title { font-size: 3rem; }
+  .img-main { width: 300px; height: 400px; }
+  .img-sub-top { width: 220px; height: 200px; }
+  .img-sub-bottom { width: 200px; height: 220px; }
+}
+
+@media (max-width: 768px) {
+  .home-hero { flex-direction: column; text-align: center; }
+  .hero-text-content { max-width: 100%; }
+  .hero-buttons { justify-content: center; flex-wrap: wrap; }
+  .hero-image-collage { height: 400px; margin-top: 40px; }
+  
+  .img-main { left: 50%; transform: translate(-50%, -50%); width: 250px; height: 350px; z-index: 3;}
+  .img-sub-top { right: 0; width: 150px; height: 200px; z-index: 1;}
+  .img-sub-bottom { left: 0; bottom: 0; width: 160px; height: 180px; z-index: 2;}
+}
+
+/* Javítás a legnagyobb kép lecsúszására (Desktop) */
+.img-main:hover {
+  transform: translateY(calc(-50% - 10px)) scale(1.05) !important;
+}
+
+/* Javítás a legnagyobb kép lecsúszására (Mobil nézeten) */
+@media (max-width: 768px) {
+  .img-main:hover {
+    transform: translate(-50%, calc(-50% - 10px)) scale(1.05) !important;
+  }
 }
