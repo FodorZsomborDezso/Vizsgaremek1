@@ -3,12 +3,16 @@ import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import NotFound from './pages/NotFound/NotFound'; 
+
+import ScrollToTop from './components/ScrollToTop';
 import Header from './components/Header/Header';
 import Footer from './components/Footer/Footer';
 
+
 import Home from './pages/Home/Home';
 import Gallery from './pages/Gallery/Gallery';
-import Chat from './pages/Chat/Chat';
+import Messages from './pages/Messages/Messages';
 import Upload from './pages/Upload/Upload';
 import Ideas from './pages/Ideas/Ideas';
 import Admin from './pages/Admin/Admin';
@@ -35,16 +39,19 @@ function App() {
   };
 
   return (
+
     <div className="app-container">
+      <ScrollToTop />
       <Header theme={theme} toggleTheme={toggleTheme} />
 
       <ToastContainer position="bottom-right" autoClose={3000} theme="dark" />
       
       <main className="main-content">
         <Routes>
+          
           <Route path="/" element={<Home />} />
           <Route path="/gallery" element={<Gallery />} /> {/* <--- ÚJ */}
-          <Route path="/chat/:userId" element={<Chat />} />
+          <Route path="/messages" element={<Messages />} />
           <Route path="/upload" element={<Upload />} />   {/* <--- ÚJ */}
           <Route path="/ideas" element={<Ideas />} /> {/* <--- ÚJ ÚTVONAL */}
           <Route path="/admin" element={<Admin />} />
@@ -54,7 +61,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/about" element={<About />} />
           <Route path="/feedback" element={<Feedback />} />
-          <Route path="*" element={<h1>404</h1>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 

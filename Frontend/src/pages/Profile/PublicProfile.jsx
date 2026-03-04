@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaMapMarkerAlt, FaUserPlus, FaUserCheck, FaEnvelope, FaUserCircle, FaHeart, FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaUserPlus, FaUserCheck, FaEnvelope, FaUserCircle, FaHeart, FaTimes, FaPaperPlane, FaLock, FaUserFriends } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './PublicProfile.css';
 
 const PublicProfile = () => {
-  const { username } = useParams(); // Kiveszi a linkből a nevet (pl. /user/BongyaSpob -> BongyaSpob)
+  const { username } = useParams();
   const navigate = useNavigate();
 
   const [profileUser, setProfileUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Követés állapotok
+  // KÖVETÉS ÉS BARÁTSÁG ÁLLAPOTOK
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowingMe, setIsFollowingMe] = useState(false); // ÚJ: Ő követ-e engem?
   const [followersCount, setFollowersCount] = useState(0);
 
   // Üzenetküldés (Modal) állapotok
@@ -27,8 +28,10 @@ const PublicProfile = () => {
   const loggedInUserStr = localStorage.getItem('user');
   const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
 
+  // 🔥 A varázslat: Akkor vagytok ismerősök, ha mindkettő igaz!
+  const isFriend = isFollowing && isFollowingMe;
+
   useEffect(() => {
-    // Ha a saját profiljára kattintott, dobjuk át a /profile oldalra!
     if (loggedInUser && loggedInUser.username === username) {
       navigate('/profile');
       return;
@@ -36,7 +39,6 @@ const PublicProfile = () => {
 
     const fetchProfile = async () => {
       try {
-        // 1. Felhasználó és posztok letöltése
         const res = await fetch(`http://localhost:3000/api/users/${username}`);
         if (!res.ok) {
           toast.error("Felhasználó nem található!");
@@ -48,7 +50,6 @@ const PublicProfile = () => {
         setPosts(data.posts);
         setFollowersCount(data.user.followers_count);
 
-        // 2. Ha be vagyunk jelentkezve, megnézzük, követjük-e már
         const token = localStorage.getItem('token');
         if (token && data.user) {
           const followRes = await fetch(`http://localhost:3000/api/users/${data.user.id}/is-following`, {
@@ -57,6 +58,7 @@ const PublicProfile = () => {
           if (followRes.ok) {
             const followData = await followRes.json();
             setIsFollowing(followData.isFollowing);
+            setIsFollowingMe(followData.isFollowingMe); // ÚJ
           }
         }
       } catch (err) {
@@ -69,7 +71,6 @@ const PublicProfile = () => {
     fetchProfile();
   }, [username, navigate, loggedInUser]);
 
-  // --- KÖVETÉS GOMB ---
   const handleFollowToggle = async () => {
     const token = localStorage.getItem('token');
     if (!token) return toast.info("A követéshez be kell jelentkezned!");
@@ -83,14 +84,18 @@ const PublicProfile = () => {
         const data = await res.json();
         setIsFollowing(data.followed);
         setFollowersCount(prev => data.followed ? prev + 1 : prev - 1);
-        toast.success(data.followed ? `Mostantól követed őt: @${profileUser.username}!` : "Követés leállítva.");
+        
+        if (data.followed && isFollowingMe) {
+          toast.success(`Szuper! Mostantól ismerősök vagytok @${profileUser.username}-val! 🤝`);
+        } else {
+          toast.success(data.followed ? `Követed őt: @${profileUser.username}!` : "Követés leállítva.");
+        }
       }
     } catch (err) {
       toast.error("Szerver hiba a követésnél.");
     }
   };
 
-  // --- ÜZENET KÜLDÉSE ---
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!messageContent.trim()) return;
@@ -111,7 +116,8 @@ const PublicProfile = () => {
         setIsMessageModalOpen(false);
         setMessageContent('');
       } else {
-        toast.error("Hiba az üzenet küldésekor.");
+        const errData = await res.json();
+        toast.error(errData.error || "Hiba az üzenet küldésekor.");
       }
     } catch (err) {
       toast.error("Szerver hiba.");
@@ -126,7 +132,6 @@ const PublicProfile = () => {
   return (
     <div className="public-profile-container">
       
-      {/* --- FEJLÉC ÉS ADATLAP --- */}
       <div className="public-profile-card">
         <div className="public-cover-photo"></div>
         
@@ -142,6 +147,14 @@ const PublicProfile = () => {
           <div className="public-name-section">
             <h1 className="public-name">{profileUser.full_name || profileUser.username}</h1>
             <p className="public-username">@{profileUser.username}</p>
+            
+            {/* Visszajelzés, ha ő is követ engem */}
+            {isFollowingMe && !isFollowing && (
+              <div className="follows-you-badge">Visszaigazolásra vár (Követ téged)</div>
+            )}
+            {isFriend && (
+              <div className="friends-badge"><FaUserFriends /> Ismerősök vagytok</div>
+            )}
           </div>
 
           <p className="public-bio">{profileUser.bio || "Ez a felhasználó még nem írt magáról."}</p>
@@ -150,20 +163,24 @@ const PublicProfile = () => {
             <span><FaMapMarkerAlt /> {profileUser.location || "Ismeretlen hely"}</span>
           </div>
 
-          {/* AKCIÓ GOMBOK (Követés és Üzenet) */}
           <div className="public-action-buttons">
-            <button 
-              onClick={handleFollowToggle} 
-              className={`follow-btn ${isFollowing ? 'following' : ''}`}
-            >
+            <button onClick={handleFollowToggle} className={`follow-btn ${isFollowing ? 'following' : ''}`}>
               {isFollowing ? <><FaUserCheck /> Követed</> : <><FaUserPlus /> Követés</>}
             </button>
-            <button onClick={() => setIsMessageModalOpen(true)} className="message-btn">
-              <FaEnvelope /> Üzenet
-            </button>
+            
+            {/* 🔥 ÚJ: ZÁROLT / NYITOTT ÜZENET GOMB 🔥 */}
+            {isFriend ? (
+            // Most már egyenesen a Chat oldalra visz!
+              <button onClick={() => navigate(`/chat/${profileUser.id}/${profileUser.username}`)} className="message-btn">
+                <FaEnvelope /> Üzenet
+              </button>
+            ) : (
+              <button className="message-btn locked" title="Csak ismerősöknek küldhetsz üzenetet!" disabled>
+                <FaLock /> Üzenet
+              </button>
+            )}
           </div>
 
-          {/* STATISZTIKÁK */}
           <div className="public-stats">
             <div className="stat-item"><span className="stat-value">{posts.length}</span><span className="stat-label">Poszt</span></div>
             <div className="stat-item"><span className="stat-value">{followersCount}</span><span className="stat-label">Követő</span></div>
@@ -172,7 +189,7 @@ const PublicProfile = () => {
         </div>
       </div>
 
-      {/* --- GALÉRIA --- */}
+      {/* Galéria Rács (Változatlan) */}
       <h3 className="public-gallery-title">@{profileUser.username} alkotásai</h3>
       <div className="public-gallery-grid">
         {posts.length > 0 ? (
@@ -185,14 +202,10 @@ const PublicProfile = () => {
               </div>
             </div>
           ))
-        ) : (
-          <div className="empty-state">Még nem töltött fel képet.</div>
-        )}
+        ) : ( <div className="empty-state">Még nem töltött fel képet.</div> )}
       </div>
 
-      {/* ========================================= */}
-      {/* 🔥 ÜZENETKÜLDÉS MODAL 🔥                  */}
-      {/* ========================================= */}
+      {/* Modalok (Változatlanok) ... */}
       {isMessageModalOpen && (
         <div className="public-modal-overlay" onClick={() => setIsMessageModalOpen(false)}>
           <div className="public-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -204,14 +217,7 @@ const PublicProfile = () => {
               Címzett: <strong style={{color: 'var(--text-primary)'}}>@{profileUser.username}</strong>
             </div>
             <form onSubmit={handleSendMessage}>
-              <textarea 
-                rows="5" 
-                placeholder="Írd meg az üzeneted..." 
-                value={messageContent} 
-                onChange={(e) => setMessageContent(e.target.value)}
-                required
-                className="modern-textarea"
-              ></textarea>
+              <textarea rows="5" placeholder="Írd meg az üzeneted..." value={messageContent} onChange={(e) => setMessageContent(e.target.value)} required className="modern-textarea"></textarea>
               <button type="submit" disabled={isSending || !messageContent.trim()} className="send-message-submit-btn">
                 {isSending ? 'Küldés...' : <><FaPaperPlane style={{marginRight: '8px'}}/> Küldés</>}
               </button>
@@ -220,9 +226,6 @@ const PublicProfile = () => {
         </div>
       )}
 
-      {/* ========================================= */}
-      {/* 🔥 KÉP LIGHTBOX (Nagyítás) 🔥             */}
-      {/* ========================================= */}
       {selectedPost && (
         <div className="public-modal-overlay" onClick={() => setSelectedPost(null)}>
           <div className="lightbox-image-only-content" onClick={e => e.stopPropagation()}>

@@ -144,9 +144,16 @@ const Profile = () => {
 
   // --- EGYÉB ---
   const handleLogout = () => {
+    // 1. Töröljük az adatokat
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login'; 
+    
+    // 2. Szólunk a Header-nek (és mindenkinek), hogy frissítsen azonnal!
+    window.dispatchEvent(new Event('authChange'));
+    
+    // 3. Lágy, frissítés nélküli átirányítás a login oldalra
+    toast.info("Sikeresen kijelentkeztél! 👋");
+    navigate('/login');
   };
 
   const handleDeletePost = async (postId) => {

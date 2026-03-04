@@ -192,3 +192,48 @@
 .lightbox-image-info { padding: 20px; text-align: center; border-top: 1px solid var(--border-color); }
 .lightbox-image-info h2 { margin: 0 0 5px 0; color: var(--text-primary); font-size: 1.3rem; }
 .lightbox-image-info p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
+
+/* ========================================= */
+/* KÖVETÉS ÉS ISMERŐS JELVÉNYEK              */
+/* ========================================= */
+.follows-you-badge {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.friends-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: rgba(46, 204, 113, 0.1);
+  color: #2ecc71;
+  font-size: 0.85rem;
+  font-weight: bold;
+  padding: 5px 15px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+/* ========================================= */
+/* ZÁROLT ÜZENET GOMB                        */
+/* ========================================= */
+.message-btn.locked {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.message-btn.locked:hover {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  transform: none; /* Ne mozduljon el */
+}

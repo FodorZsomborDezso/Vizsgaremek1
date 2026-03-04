@@ -1,16 +1,55 @@
-# React + Vite
+# 👁️ ArtisticEye - Vizuális Közösségi Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Az **ArtisticEye** egy modern, teljes értékű közösségi képmegosztó és ötletbörze platform, amely összehozza a vizuális alkotókat és a művészetkedvelőket. A felhasználók megoszthatják saját alkotásaikat, inspirálódhatnak mások munkáiból, és valós időben tarthatják a kapcsolatot.
 
-Currently, two official plugins are available:
+## ✨ Főbb Funkciók
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* **Dinamikus Galéria:** Pinterest-stílusú (Masonry) elrendezés, letisztult Lightbox képnézegetővel és kategória alapú szűréssel.
+* **Közösségi Ötletbörze:** Oszd meg a vizuális koncepcióidat szövegesen, és nézd meg, ahogy más alkotók életre keltik azokat!
+* **Interaktív Profilok:** Testreszabható felhasználói adatlapok borítóképpel, avatárral és részletes statisztikákkal.
+* **Közösségi Hálózat:** Kölcsönös követési rendszer (Ismerősök), amellyel privát hálózatot építhetsz.
+* **Valós idejű Chat:** Beépített, élő üzenetküldő rendszer az ismerősök közötti kommunikációhoz.
+* **Okos Értesítések:** Azonnali visszajelzés (harang ikon), ha valaki lájkolja a képedet, kommentel, vagy bekövet.
+* **Profi Adminisztráció:** Dedikált admin felület a felhasználók, posztok és jelentések kezelésére.
 
-## React Compiler
+## 🛠️ Használt Technológiák
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Frontend:**
+* React.js (Vite)
+* React Router DOM (Kliens oldali navigáció)
+* Tiszta CSS3 (Reszponzív, modern UI, CSS változók, Animációk)
+* React Icons & React Toastify
 
-## Expanding the ESLint configuration
+**Backend & Adatbázis:**
+* Node.js & Express.js
+* MySQL (Relációs adatbázis)
+* JSON Web Token (JWT) alapú hitelesítés
+* Bcrypt.js (Jelszó titkosítás)
+* Multer & Sharp (Képfeldolgozás és optimalizálás)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 Telepítés és Futtatás (Helyi környezetben)
+
+### 1. Adatbázis beállítása
+1. Telepíts egy lokális webszervert (pl. XAMPP).
+2. Hozz létre egy új MySQL adatbázist.
+3. Importáld be a projektben található SQL fájlt a táblák létrehozásához.
+4. Módosítsd a `db.js` fájlban az adatbázis kapcsolati adatait.
+
+### 2. Backend indítása
+Nyiss egy terminált a backend mappában:
+\`\`\`bash
+npm install
+node server.js
+\`\`\`
+*(A backend alapértelmezetten a `http://localhost:3000` porton indul el.)*
+
+### 3. Frontend indítása
+Nyiss egy új terminált a frontend mappában:
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+*(A frontend a Vite segítségével indul el, általában a `http://localhost:5173` címen.)*
+
+---
+*Készült vizsgamunkaként / Portfólió projektként - 2026*

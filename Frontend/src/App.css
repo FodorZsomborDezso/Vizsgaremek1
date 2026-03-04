@@ -78,3 +78,13 @@ body {
   /* 🔥 ÚJ: Ezt a sort add hozzá! (A cubic-bezier adja azt a szép, ruganyos megállást) */
   animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+p, h1, h2, h3, h4, h5, h6, span, blockquote, td, li, .chat-bubble, .notif-text {
+  /* Ha egy szó hosszabb, mint a rendelkezésre álló hely, erőszakkal eltöri a következő sorba */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  
+  /* Ha a böngésző ismeri a nyelvet, betesz egy kötőjelet a töréshez */
+  hyphens: auto; 
+}

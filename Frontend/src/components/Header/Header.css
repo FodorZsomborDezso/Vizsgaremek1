@@ -187,3 +187,45 @@
     display: block;
   }
 }
+/* ========================================= */
+/* ÉRTESÍTÉSEK (NOTIFICATIONS)               */
+/* ========================================= */
+.notif-container { position: relative; }
+.notif-btn { position: relative; transition: transform 0.2s; }
+.notif-btn:hover { transform: scale(1.1); color: #00d2ff !important; }
+
+.notif-badge {
+  position: absolute; top: -5px; right: -5px; background-color: #e74c3c; color: white;
+  font-size: 0.7rem; font-weight: bold; width: 18px; height: 18px; border-radius: 50%;
+  display: flex; justify-content: center; align-items: center; border: 2px solid var(--bg-primary);
+}
+
+.notif-dropdown {
+  position: absolute; top: 50px; right: -50px; width: 320px; background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  z-index: 1000; overflow: hidden; animation: slideDown 0.2s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-dropdown h4 { margin: 0; padding: 15px; background-color: var(--bg-primary); border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+
+.notif-list { max-height: 400px; overflow-y: auto; }
+.no-notifs { padding: 20px; text-align: center; color: var(--text-secondary); margin: 0; }
+
+.notif-item {
+  display: flex; gap: 12px; padding: 15px; border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s; cursor: pointer;
+}
+.notif-item:hover { background-color: rgba(0, 210, 255, 0.05); }
+.notif-item.unread { background-color: rgba(0, 210, 255, 0.1); }
+.notif-item img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+
+.notif-text { font-size: 0.9rem; color: var(--text-primary); line-height: 1.4; display: flex; flex-direction: column; }
+.notif-time { font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px; }
+
+@media (max-width: 768px) {
+  .notif-dropdown { right: -100px; width: 300px; }
+}

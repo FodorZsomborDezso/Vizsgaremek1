@@ -3,28 +3,81 @@ import { Link } from 'react-router-dom';
 import { 
   FaEye, FaSun, FaMoon, 
   FaLightbulb, FaImages, FaUpload, 
-  FaHome, FaUserCircle, FaShieldAlt, // <--- 1. ÚJ IKON IMPORTÁLVA
+  FaHome, FaUserCircle, FaShieldAlt,
   FaShare,
-  FaCircle,
-  FaInbox,
-  FaInfoCircle
+  FaBell,
+  FaInfoCircle,
+  FaEnvelope
 } from 'react-icons/fa';
 import './Header.css';
 
 const Header = ({ theme, toggleTheme }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null); // Itt tároljuk, hogy be van-e lépve valaki
+  const [user, setUser] = useState(null); 
+
+  // --- ÉRTESÍTÉSEK ÁLLAPOTAI ---
+  const [notifications, setNotifications] = useState([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   // 1. Amikor betölt a Header, megnézzük a LocalStorage-ot
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const checkAuthStatus = () => {
+      const storedUser = localStorage.getItem('user');
+      setUser(storedUser ? JSON.parse(storedUser) : null);
+    };
+
+    checkAuthStatus(); // Lefut az oldal betöltésekor
+
+    // 🔥 A VARÁZSLAT: Figyeljük, ha bárhol az oldalon be/kijelentkezés történik!
+    window.addEventListener('authChange', checkAuthStatus);
+
+    // Takarítás, ha a komponens megszűnik
+    return () => window.removeEventListener('authChange', checkAuthStatus);
   }, []);
+
+  // 2. Értesítések lekérése, ha a felhasználó be van lépve
+  useEffect(() => {
+    if (user) {
+      const fetchNotifs = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        try {
+          const res = await fetch('http://localhost:3000/api/notifications', { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          });
+          if (res.ok) setNotifications(await res.json());
+        } catch(e) {
+          console.error("Hiba az értesítések lekérésekor:", e);
+        }
+      };
+      
+      fetchNotifs(); // Azonnali lekérés
+      const interval = setInterval(fetchNotifs, 5000); // 5 másodpercenkénti frissítés
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Olvasatlan értesítések száma
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Harang ikonra kattintás (Megnyitja az ablakot és olvasottá teszi őket)
+  const handleNotifClick = async () => {
+    setIsNotifOpen(!isNotifOpen);
+    
+    // Csak akkor küldünk kérést a szervernek, ha vannak olvasatlanok és épp most nyitjuk ki
+    if (!isNotifOpen && unreadCount > 0) {
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:3000/api/notifications/read', { 
+        method: 'PUT', 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      // Frissítjük a felületet is, hogy eltűnjön a piros pötty
+      setNotifications(notifications.map(n => ({...n, is_read: true})));
+    }
+  };
 
   return (
     <header className="header-container">
@@ -87,16 +140,14 @@ const Header = ({ theme, toggleTheme }) => {
               </li>
             )}
 
-            {/* ========================================= */}
-            {/* 🔥 3. ADMIN MENÜ (CSAK ADMINOKNAK) 🔥   */}
-            {/* ========================================= */}
+            {/* 3. ADMIN MENÜ (CSAK ADMINOKNAK) */}
             {user && user.role === 'admin' && (
               <li className="nav-item">
                 <Link 
                   to="/admin" 
                   className="nav-link" 
                   onClick={closeMobileMenu}
-                  style={{ color: '#ffcc00', fontWeight: 'bold' }} // Kiemeljük sárgával
+                  style={{ color: '#ffcc00', fontWeight: 'bold' }}
                 >
                   <FaShieldAlt style={{marginRight:'5px'}}/> Admin
                 </Link>
@@ -113,7 +164,7 @@ const Header = ({ theme, toggleTheme }) => {
             {/* ELVÁLASZTÓ VONAL */}
             <li className="nav-item desktop-only-separator">|</li>
 
-            {/* 5. DINAMIKUS RÉSZ: LOGIN VAGY PROFIL */}
+            {/* 5. DINAMIKUS RÉSZ: LOGIN VAGY PROFIL + ÉRTESÍTÉSEK + ÜZENETEK */}
             {!user ? (
               // HA NINCS BELÉPVE:
               <>
@@ -126,16 +177,61 @@ const Header = ({ theme, toggleTheme }) => {
               </>
             ) : (
               // HA BE VAN LÉPVE:
-              <li className="nav-item user-profile-link">
-                <Link to="/profile" className="nav-link" onClick={closeMobileMenu} style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                  {user.avatar_url && user.avatar_url.includes('http') ? (
-                    <img src={user.avatar_url} alt="Avatar" style={{width:'30px', height:'30px', borderRadius:'50%', objectFit:'cover'}} />
-                  ) : (
-                    <FaUserCircle style={{fontSize:'1.5rem'}} />
+              <>
+                {/* 🔥 ÚJ: ÉRTESÍTÉSEK (HARANG) 🔥 */}
+                <li className="nav-item notif-container">
+                  <button className="nav-link notif-btn" onClick={handleNotifClick} style={{background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', fontSize:'1.3rem', position:'relative', color:'var(--text-primary)'}}>
+                    <FaBell />
+                    {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+                  </button>
+
+                  {/* Legördülő ablak */}
+                  {isNotifOpen && (
+                    <div className="notif-dropdown">
+                      <h4>Értesítések</h4>
+                      <div className="notif-list">
+                        {notifications.length === 0 ? (
+                          <p className="no-notifs">Nincsenek új értesítéseid.</p>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`}>
+                              <img src={n.avatar_url || 'https://ui-avatars.com/api/?name=User'} alt="avatar" />
+                              <div className="notif-text">
+                                <strong>@{n.username}</strong> 
+                                {n.type === 'like' && ' kedvelte a posztodat. ❤️'}
+                                {n.type === 'comment' && ' kommentált a képedhez. 💬'}
+                                {n.type === 'follow' && ' elkezdett követni téged. 👤'}
+                                {n.type === 'message' && ' üzenetet küldött neked. ✉️'}
+                                {n.type === 'implementation' && ' megvalósította az ötletedet! 💡'}
+                                <span className="notif-time">{new Date(n.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   )}
-                  <span>{user.username}</span>
-                </Link>
-              </li>
+                </li>
+
+                {/* ÜZENETEK IKON */}
+                <li className="nav-item">
+                  <Link to="/messages" className="nav-link" onClick={closeMobileMenu} title="Üzenetek" style={{display: 'flex', alignItems: 'center', fontSize: '1.4rem', color: '#00d2ff'}}>
+                    <FaEnvelope />
+                  </Link>
+                </li>
+
+                {/* PROFIL IKON */}
+                <li className="nav-item user-profile-link">
+                  <Link to="/profile" className="nav-link" onClick={closeMobileMenu} style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                    {user.avatar_url && user.avatar_url.includes('http') ? (
+                      <img src={user.avatar_url} alt="Avatar" style={{width:'30px', height:'30px', borderRadius:'50%', objectFit:'cover'}} />
+                    ) : (
+                      <FaUserCircle style={{fontSize:'1.5rem'}} />
+                    )}
+                    <span>{user.username}</span>
+                  </Link>
+                </li>
+              </>
             )}
 
           </ul>
