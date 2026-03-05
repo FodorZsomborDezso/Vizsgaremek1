@@ -253,8 +253,17 @@ app.get('/api/gallery', async (req, res) => {
         `;
         const queryParams = [];
 
-        if (search) { sql += ` AND posts.title LIKE ?`; queryParams.push(`%${search}%`); }
-        if (category) { sql += ` AND categories.name = ?`; queryParams.push(category); }
+        // 🔥 MÓDOSÍTOTT RÉSZ: Zárójelek között keressük a címben VAGY a címkékben!
+        if (search) { 
+            sql += ` AND (posts.title LIKE ? OR posts.tags LIKE ?)`; 
+            queryParams.push(`%${search}%`, `%${search}%`); 
+        }
+        
+        if (category) { 
+            sql += ` AND categories.name = ?`; 
+            queryParams.push(category); 
+        }
+        
         sql += ` GROUP BY posts.id `;
 
         if (sort === 'popular') sql += ` ORDER BY like_count DESC `; 
@@ -266,11 +275,14 @@ app.get('/api/gallery', async (req, res) => {
 
         const [rows] = await db.query(sql, queryParams);
         res.json(formatPostsForFrontend(rows)); 
-    } catch (err) { res.status(500).json({ error: 'Hiba a galéria betöltésekor' }); }
+    } catch (err) { 
+        res.status(500).json({ error: 'Hiba a galéria betöltésekor' }); 
+    }
 });
 
 app.post('/api/posts', authenticateToken, upload.single('image'), async (req, res) => {
-    const { title, description, category_id, idea_id } = req.body;
+    // 🔥 ÚJ: tags is bejön a req.body-ból
+    const { title, description, category_id, idea_id, tags } = req.body;
     if (!title || !req.file) return res.status(400).json({ error: 'Cím és Kép megadása kötelező!' });
 
     try {
@@ -281,12 +293,17 @@ app.post('/api/posts', authenticateToken, upload.single('image'), async (req, re
         let finalIdeaId = null;
         if (idea_id && idea_id !== 'null' && idea_id !== '') finalIdeaId = parseInt(idea_id);
 
-        const sql = `INSERT INTO posts (user_id, category_id, idea_id, title, description, image_url, image_data, image_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-        await db.query(sql, [req.user.id, category_id || 1, finalIdeaId, title, description, 'BLOB', optimizedImageBuffer, 'image/jpeg']);
+        // 🔥 ÚJ: tags hozzáadása az SQL lekérdezéshez
+        const sql = `INSERT INTO posts (user_id, category_id, idea_id, title, description, tags, image_url, image_data, image_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        await db.query(sql, [req.user.id, category_id || 1, finalIdeaId, title, description, tags || null, 'BLOB', optimizedImageBuffer, 'image/jpeg']);
+        
+        // (Opcionális: Értesítés az ötletgazdának, ha van)
         if (finalIdeaId) {
             const [idea] = await db.query('SELECT user_id FROM ideas WHERE id = ?', [finalIdeaId]);
-            if (idea.length > 0) await sendNotification(idea[0].user_id, req.user.id, 'implementation', finalIdeaId);
-        }       
+            if (idea.length > 0 && idea[0].user_id !== req.user.id) {
+                try { await db.query('INSERT INTO notifications (user_id, sender_id, type, target_id) VALUES (?, ?, ?, ?)', [idea[0].user_id, req.user.id, 'implementation', finalIdeaId]); } catch(e){}
+            }
+        }
         res.status(201).json({ message: 'Poszt sikeresen létrehozva!' });
     } catch (err) { res.status(500).json({ error: 'Adatbázis hiba történt.' }); }
 });
@@ -538,6 +555,87 @@ app.put('/api/notifications/read', authenticateToken, async (req, res) => {
         await db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = ?', [req.user.id]);
         res.json({ message: 'Olvasottnak jelölve!' });
     } catch (err) { res.status(500).json({ error: 'Hiba' }); }
+});
+
+// ==========================================
+// 12. GYŰJTEMÉNYEK / MOODBOARDOK (MENTÉS)
+// ==========================================
+
+// 1. A bejelentkezett felhasználó mappáinak lekérése
+app.get('/api/collections', authenticateToken, async (req, res) => {
+    try {
+        const [collections] = await db.query('SELECT * FROM collections WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+        res.json(collections);
+    } catch (err) { res.status(500).json({ error: 'Hiba a gyűjtemények betöltésekor' }); }
+});
+
+// 2. Új mappa létrehozása
+app.post('/api/collections', authenticateToken, async (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'A mappa neve kötelező!' });
+    try {
+        const [result] = await db.query('INSERT INTO collections (user_id, name) VALUES (?, ?)', [req.user.id, name]);
+        res.status(201).json({ id: result.insertId, name, user_id: req.user.id });
+    } catch (err) { res.status(500).json({ error: 'Hiba a mappa létrehozásakor' }); }
+});
+
+// 3. Kép hozzáadása egy mappához
+app.post('/api/collections/:collectionId/add', authenticateToken, async (req, res) => {
+    const { postId } = req.body;
+    const collectionId = req.params.collectionId;
+    try {
+        // Megnézzük, benne van-e már
+        const [exists] = await db.query('SELECT * FROM collection_items WHERE collection_id = ? AND post_id = ?', [collectionId, postId]);
+        if (exists.length > 0) return res.status(400).json({ error: 'Ez a kép már benne van ebben a gyűjteményben!' });
+
+        await db.query('INSERT INTO collection_items (collection_id, post_id) VALUES (?, ?)', [collectionId, postId]);
+        res.json({ message: 'Sikeresen hozzáadva a gyűjteményhez!' });
+    } catch (err) { res.status(500).json({ error: 'Hiba a mentés során' }); }
+});
+
+// 4. Egy adott felhasználó gyűjteményeinek lekérése (borítóképpel és elemszámmal)
+app.get('/api/users/:username/collections', async (req, res) => {
+    try {
+        const [users] = await db.query('SELECT id FROM users WHERE username = ?', [req.params.username]);
+        if (users.length === 0) return res.status(404).json({ error: 'Felhasználó nem található' });
+
+        // MÓDOSÍTÁS: Nem az image_url-t, hanem a legutolsó kép ID-ját (cover_post_id) kérjük le!
+        const sql = `
+            SELECT c.*, 
+                   (SELECT ci.post_id FROM collection_items ci WHERE ci.collection_id = c.id ORDER BY ci.added_at DESC LIMIT 1) as cover_post_id,
+                   (SELECT COUNT(*) FROM collection_items WHERE collection_id = c.id) as item_count
+            FROM collections c
+            WHERE c.user_id = ?
+            ORDER BY c.created_at DESC
+        `;
+        const [collections] = await db.query(sql, [users[0].id]);
+
+        // 🔥 ITT A VARÁZSLAT: Kézzel megcsináljuk a borítókép rendes linkjét a backend alapján!
+        const formattedCollections = collections.map(col => ({
+            ...col,
+            cover_image: col.cover_post_id ? `http://localhost:3000/api/posts/${col.cover_post_id}/image` : null
+        }));
+
+        res.json(formattedCollections);
+    } catch (err) { res.status(500).json({ error: 'Hiba a gyűjtemények betöltésekor' }); }
+});
+
+// 5. Egy konkrét gyűjtemény tartalmának (posztjainak) lekérése
+app.get('/api/collections/:id/posts', async (req, res) => {
+    try {
+        const sql = `
+            SELECT p.*, u.username, u.avatar_url, c.name as category_name,
+                   (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
+            FROM collection_items ci
+            JOIN posts p ON ci.post_id = p.id
+            JOIN users u ON p.user_id = u.id
+            JOIN categories c ON p.category_id = c.id
+            WHERE ci.collection_id = ?
+            ORDER BY ci.added_at DESC
+        `;
+        const [posts] = await db.query(sql, [req.params.id]);
+        res.json(formatPostsForFrontend(posts));
+    } catch (err) { res.status(500).json({ error: 'Hiba a képek betöltésekor' }); }
 });
 
 // ==========================================

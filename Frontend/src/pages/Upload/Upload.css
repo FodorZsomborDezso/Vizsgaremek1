@@ -237,3 +237,122 @@
     padding: 30px 20px;
   }
 }
+
+/* ========================================= */
+/* KÉPVÁGÓ (CROPPER) STÍLUSOK                */
+/* ========================================= */
+.crop-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center;
+  z-index: 6000; backdrop-filter: blur(5px);
+}
+
+.crop-modal-content {
+  background-color: var(--bg-primary); width: 90%; max-width: 700px;
+  border-radius: 20px; padding: 30px; display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border-color);
+}
+
+.crop-modal-content h2 {
+  margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 10px;
+}
+
+.crop-container {
+  position: relative; width: 100%; height: 400px; background-color: #333;
+  border-radius: 10px; overflow: hidden;
+}
+
+.crop-controls {
+  display: flex; justify-content: center; padding: 10px 0;
+}
+
+.zoom-slider {
+  width: 60%; cursor: pointer; accent-color: #00d2ff;
+}
+
+.crop-modal-actions {
+  display: flex; justify-content: flex-end; gap: 15px;
+}
+
+/* Új gomb az Eredeti mérethez a vágóban */
+.btn-secondary {
+  padding: 12px 25px;
+  border-radius: 30px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: 2px solid #00d2ff;
+  color: #00d2ff;
+  display: flex;
+  align-items: center;
+}
+
+.btn-secondary:hover {
+  background: rgba(0, 210, 255, 0.1);
+  transform: translateY(-2px);
+}
+/* ========================================= */
+/* CÍMKÉK (HASHTAGEK) STÍLUSAI               */
+/* ========================================= */
+.tags-input-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  transition: border-color 0.3s;
+}
+
+.tags-input-container:focus-within {
+  border-color: #00d2ff;
+}
+
+.tag-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.remove-tag-icon {
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.remove-tag-icon:hover {
+  transform: scale(1.2);
+  color: #ff4757;
+}
+
+.tag-input-field {
+  flex: 1;
+  min-width: 150px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  padding: 5px;
+}
+
+.tag-input-field:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FaHeart, FaDownload, FaShareAlt, FaSearch, FaFilter, FaSortAmountDown, FaTimes, FaPaperPlane, FaUserCircle, FaFlag, FaCloudUploadAlt } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom'; // 🔥 useNavigate behozva
+import { FaHeart, FaDownload, FaShareAlt, FaSearch, FaFilter, FaSortAmountDown, FaTimes, FaPaperPlane, FaUserCircle, FaFlag, FaCloudUploadAlt, FaBookmark } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Gallery.css';
 
 const Gallery = () => {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -22,7 +23,18 @@ const Gallery = () => {
   const [isCommentLoading, setIsCommentLoading] = useState(false);
   const [myLikedPosts, setMyLikedPosts] = useState([]); // SAJÁT LÁJKOK
 
-  const categories = ['Természet', 'Város', 'Tech', 'Digitális Art', 'Design'];
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [postToSave, setPostToSave] = useState(null);
+  const [myCollections, setMyCollections] = useState([]);
+  const [newCollectionName, setNewCollectionName] = useState('');
+
+  // AZ ÚJ KATEGÓRIÁK LISTÁJA (a szűrő menühöz)
+  const categories = [
+    'Természet', 'Város / Építészet', 'Portré', 'Makró Fotózás', 'Éjszakai Fotózás',
+    'Általános Digitális Art', '3D Render', 'Illusztráció', 'Koncepciórajz', 'AI Művészet',
+    'Festmény', 'Rajz / Grafika', 'Szobrászat',
+    'Általános Design', 'Web / UI Design', 'Logó / Arculat', 'Tipográfia', 'Tech'
+  ];
 
   // 1. SAJÁT LÁJKOK LETÖLTÉSE (Első betöltéskor)
   useEffect(() => {
@@ -43,6 +55,7 @@ const Gallery = () => {
   const fetchPosts = async (pageNumber, reset = false) => {
     setLoading(true);
     try {
+      // 🔥 A search végpont módosítva, hogy a címkékben (tags) is keressen!
       const res = await fetch(`http://localhost:3000/api/gallery?page=${pageNumber}&limit=12&search=${searchTerm}&category=${selectedCategory}&sort=${sortBy}`);
       const data = await res.json();
 
@@ -71,9 +84,9 @@ const Gallery = () => {
     fetchPosts(nextPage);
   };
 
-  // --- LÁJKOLÁS FÜGGVÉNY ---
+  // --- LÁJKOLÁS FÜGGVÉNY (Egyaránt működik a hover gombról és a kártyáról) ---
   const handleLike = async (e, postId) => {
-    e.stopPropagation(); 
+    e.stopPropagation(); // Ez megakadályozza, hogy a Lightbox is megnyíljon
     const token = localStorage.getItem('token');
     if (!token) return toast.info("Kérlek, jelentkezz be a kedveléshez!");
 
@@ -93,6 +106,61 @@ const Gallery = () => {
         ));
       }
     } catch (error) { console.error("Hiba:", error); }
+  };
+
+  // --- MENTÉS (GYŰJTEMÉNYEK) LOGIKA ---
+  const openSaveModal = async (e, post) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    if (!token) return toast.info("A mentéshez be kell jelentkezned!");
+
+    setPostToSave(post);
+    setShowSaveModal(true);
+
+    try {
+      const res = await fetch('http://localhost:3000/api/collections', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) setMyCollections(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreateCollection = async (e) => {
+    e.preventDefault();
+    if (!newCollectionName.trim()) return;
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch('http://localhost:3000/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name: newCollectionName })
+      });
+      if (res.ok) {
+        const newCol = await res.json();
+        setMyCollections([newCol, ...myCollections]); // Bekerül a lista tetejére
+        setNewCollectionName('');
+        toast.success("Új mappa létrehozva!");
+      }
+    } catch (err) { toast.error("Hiba történt."); }
+  };
+
+  const saveToCollection = async (collectionId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`http://localhost:3000/api/collections/${collectionId}/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ postId: postToSave.id })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Kép elmentve a mappába! 📌`);
+        setShowSaveModal(false);
+      } else {
+        toast.error(data.error || "Hiba a mentéskor.");
+      }
+    } catch (err) { toast.error("Hiba a mentéskor."); }
   };
 
   // --- JELENTÉS BEKÜLDÉSE ---
@@ -137,6 +205,13 @@ const Gallery = () => {
     e.stopPropagation();
     navigator.clipboard.writeText(image_url);
     toast.info("Kép linkje másolva a vágólapra! 📋");
+  };
+
+  // --- CÍMKE (HASHTAG) KATTINTÁS ---
+  const handleTagClick = (tag) => {
+    setSearchTerm(tag); // Beállítja a keresőbe a címkét
+    closeLightbox(); // Bezárja a Lightboxot
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Felgörget a tetejére
   };
 
   // --- LIGHTBOX ÉS KOMMENTEK ---
@@ -199,7 +274,7 @@ const Gallery = () => {
             <label>Keresés</label>
             <div className="search-bar">
               <FaSearch className="search-icon" />
-              <input type="text" placeholder="Cím alapján..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder="Cím vagy #címke..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
 
@@ -229,7 +304,6 @@ const Gallery = () => {
         <div className="gallery-header-row">
           <h1 className="gallery-title" style={{ marginBottom: 0 }}>Felfedezés</h1>
           
-          {/* FONTOS: A "to" értékét írd át arra a linkre, ahová a feltöltés oldalad mutat (pl. /upload vagy /create-post) */}
           <Link to="/upload" className="upload-action-btn">
             <FaCloudUploadAlt style={{ marginRight: '8px', fontSize: '1.2rem' }} /> 
             Új kép feltöltése
@@ -238,24 +312,44 @@ const Gallery = () => {
 
         <div className="masonry-grid">
           {posts.map(post => {
-            const isLiked = myLikedPosts.includes(post.id); // Megnézzük, hogy lájkolta-e
+            const isLiked = myLikedPosts.includes(post.id);
 
             return (
               <div key={post.id} className="gallery-card" onClick={() => openLightbox(post)}>
                 <div className="card-image-wrapper">
                   <span className="card-badge">{post.category_name}</span>
                   <img src={post.image_url} alt={post.title} loading="lazy" />
+                  
+                  {/* 🔥 ÚJ: A két gombot egy közös dobozba zártuk a jobb felső sarokban! */}
+                  <div className="quick-actions-container">
+                    <button 
+                      className="quick-save-btn"
+                      onClick={(e) => openSaveModal(e, post)}
+                      title="Mentés gyűjteménybe"
+                    >
+                      <FaBookmark />
+                    </button>
+                    
+                    <button 
+                      className={`quick-like-btn ${isLiked ? 'liked' : ''}`}
+                      onClick={(e) => handleLike(e, post.id)}
+                      title={isLiked ? "Nincs már a kedvencek közt" : "Kedvelés"}
+                    >
+                      <FaHeart />
+                    </button>
+                  </div>
                 </div>
+
+                
+
                 <div className="card-content">
                   <h3 className="card-title" title={post.title}>{post.title}</h3>
                   
-                  {/* KATTINTHATÓ NÉV A KÁRTYÁN */}
                   <p className="card-author">
                     Készítette: <Link to={`/user/${post.username}`} onClick={e => e.stopPropagation()} style={{color: 'inherit', textDecoration: 'underline'}}>@{post.username}</Link>
                   </p>
                   
                   <div className="card-footer">
-                    {/* KATTINTHATÓ ÉS SZÍNEZŐDŐ LÁJK GOMB */}
                     <span 
                       className="card-likes" 
                       onClick={(e) => handleLike(e, post.id)} 
@@ -287,6 +381,47 @@ const Gallery = () => {
         {!hasMore && posts.length > 0 && <div className="end-message">Elértél a galéria végére! 🏁</div>}
       </main>
 
+      {/* ========================================= */}
+      {/* 🔥 MENTÉS / GYŰJTEMÉNY MODAL 🔥           */}
+      {/* ========================================= */}
+      {showSaveModal && postToSave && (
+        <div className="save-modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="save-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="save-modal-header">
+              <h3>Mentés ide:</h3>
+              <button className="close-btn" onClick={() => setShowSaveModal(false)}><FaTimes /></button>
+            </div>
+            
+            <div className="save-modal-body">
+              <img src={postToSave.image_url} alt="Kép" className="save-preview-img" />
+              
+              <div className="collections-list">
+                {myCollections.length === 0 ? (
+                  <p className="no-collections">Még nincs egyetlen mappád sem.</p>
+                ) : (
+                  myCollections.map(col => (
+                    <button key={col.id} className="collection-item-btn" onClick={() => saveToCollection(col.id)}>
+                      <FaBookmark style={{ color: '#00d2ff', marginRight: '10px' }} />
+                      {col.name}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <form className="create-collection-form" onSubmit={handleCreateCollection}>
+                <input 
+                  type="text" 
+                  placeholder="Új mappa neve..." 
+                  value={newCollectionName} 
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                />
+                <button type="submit" disabled={!newCollectionName.trim()}>Létrehozás</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* OSZTOTT KÉPERNYŐS LIGHTBOX (MODAL) */}
       {selectedPost && (
         <div className="lightbox-overlay" onClick={closeLightbox}>
@@ -301,7 +436,6 @@ const Gallery = () => {
               
               <div className="lightbox-header">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  {/* KATTINTHATÓ AVATAR ÉS NÉV A LIGHTBOXBAN */}
                   <Link to={`/user/${selectedPost.username}`} onClick={closeLightbox} className="lightbox-author" style={{ textDecoration: 'none', margin: 0 }}>
                     {selectedPost.avatar_url && selectedPost.avatar_url.includes('http') ? (
                       <img src={selectedPost.avatar_url} alt="avatar" className="author-avatar" />
@@ -314,7 +448,6 @@ const Gallery = () => {
                     </div>
                   </Link>
                   
-                  {/* POSZT JELENTÉSE */}
                   <button onClick={() => handleReport('post', selectedPost.id)} style={{background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline'}}>
                     <FaFlag style={{marginRight: '5px'}}/> Jelentés
                   </button>
@@ -322,6 +455,18 @@ const Gallery = () => {
                 
                 <h2 className="lightbox-title">{selectedPost.title}</h2>
                 {selectedPost.description && <p className="lightbox-description">{selectedPost.description}</p>}
+
+                {/* 🔥 ÚJ: CÍMKÉK (HASHTAGEK) MEGJELENÍTÉSE */}
+                {selectedPost.tags && (
+                  <div className="lightbox-tags">
+                    {selectedPost.tags.split(',').map(tag => (
+                      <span key={tag} className="lightbox-tag" onClick={() => handleTagClick(tag)}>
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
               </div>
 
               <div className="lightbox-comments">
@@ -331,11 +476,9 @@ const Gallery = () => {
                   comments.map(comment => (
                     <div key={comment.id} className="comment-bubble">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                        {/* KATTINTHATÓ NÉV A KOMMENTNÉL */}
                         <Link to={`/user/${comment.username}`} onClick={closeLightbox} className="comment-user" style={{ textDecoration: 'none', margin: 0 }}>
                           @{comment.username}
                         </Link>
-                        {/* KOMMENT JELENTÉSE */}
                         <button onClick={() => handleReport('comment', comment.id)} style={{background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.7rem'}}>
                           Jelentés
                         </button>

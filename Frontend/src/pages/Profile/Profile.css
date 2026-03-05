@@ -212,3 +212,117 @@
   .profile-content { padding: 0 20px 30px; }
   .profile-stats { gap: 20px; }
 }
+
+/* ========================================= */
+/* GYŰJTEMÉNYEK (MOODBOARDS) STÍLUSAI        */
+/* ========================================= */
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 25px;
+  width: 100%;
+}
+
+.collection-card {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.collection-card:hover {
+  transform: translateY(-5px);
+}
+
+.collection-cover {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border-radius: 15px;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.collection-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.collection-card:hover .collection-cover img {
+  transform: scale(1.05);
+}
+
+.empty-cover {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  color: var(--text-secondary);
+  opacity: 0.3;
+}
+
+.collection-count {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  backdrop-filter: blur(4px);
+}
+
+.collection-title {
+  margin-top: 15px;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Amikor megnyitsz egy mappát */
+.collection-view {
+  width: 100%;
+}
+
+.collection-view-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.collection-view-header h2 {
+  margin: 15px 0 0 0;
+  color: var(--text-primary);
+  font-size: 2rem;
+}
+
+.back-to-collections-btn {
+  background: none;
+  border: none;
+  color: #00d2ff;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.back-to-collections-btn:hover {
+  background-color: rgba(0, 210, 255, 0.1);
+  transform: translateX(-5px); /* Kicsit balra mozdul */
+}

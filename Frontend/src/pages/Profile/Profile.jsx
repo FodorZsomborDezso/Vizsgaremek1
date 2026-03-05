@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, FaUserCircle, FaTrash, FaTimes, FaCloudUploadAlt, FaPen } from 'react-icons/fa';
+import { 
+  FaUserEdit, FaCamera, FaHeart, FaMapMarkerAlt, FaSignOutAlt, 
+  FaUserCircle, FaTrash, FaTimes, FaCloudUploadAlt, FaPen, 
+  FaBookmark, FaArrowLeft 
+} from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Profile.css';
 
@@ -14,6 +18,11 @@ const Profile = () => {
   
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+
+  // --- ÚJ: GYŰJTEMÉNY ÁLLAPOTOK ---
+  const [collections, setCollections] = useState([]); 
+  const [activeCollection, setActiveCollection] = useState(null); 
+  const [collectionPosts, setCollectionPosts] = useState([]); 
 
   // --- PROFIL SZERKESZTÉS ÁLLAPOTOK ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -42,16 +51,25 @@ const Profile = () => {
 
     const parsedUser = JSON.parse(storedUser);
 
+    // Saját posztok letöltése
     fetch('http://localhost:3000/api/my-posts', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => { if (Array.isArray(data)) setMyPosts(data); })
       .catch(err => console.error(err));
 
+    // Kedvelt posztok letöltése
     fetch('http://localhost:3000/api/my-liked-posts', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => { if (Array.isArray(data)) setLikedPosts(data); })
       .catch(err => console.error(err));
 
+    // Gyűjtemények (mappák) letöltése
+    fetch(`http://localhost:3000/api/users/${parsedUser.username}/collections`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setCollections(data); })
+      .catch(err => console.error(err));
+
+    // Profil adatok letöltése
     fetch(`http://localhost:3000/api/users/${parsedUser.username}`)
       .then(res => res.json())
       .then(data => {
@@ -63,6 +81,31 @@ const Profile = () => {
       })
       .catch(err => console.error(err));
   }, [navigate]);
+
+  // --- GYŰJTEMÉNY KEZELÉSE ---
+  const openCollection = async (collection) => {
+    setActiveCollection(collection); 
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`http://localhost:3000/api/collections/${collection.id}/posts`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setCollectionPosts(data);
+    } catch (err) {
+      toast.error("Hiba a gyűjtemény betöltésekor");
+    }
+  };
+
+  const closeCollection = () => {
+    setActiveCollection(null); 
+    setCollectionPosts([]);
+  };
+
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    closeCollection(); 
+  };
 
   // --- PROFIL SZERKESZTÉSE ---
   const openEditModal = () => {
@@ -144,14 +187,9 @@ const Profile = () => {
 
   // --- EGYÉB ---
   const handleLogout = () => {
-    // 1. Töröljük az adatokat
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    // 2. Szólunk a Header-nek (és mindenkinek), hogy frissítsen azonnal!
     window.dispatchEvent(new Event('authChange'));
-    
-    // 3. Lágy, frissítés nélküli átirányítás a login oldalra
     toast.info("Sikeresen kijelentkeztél! 👋");
     navigate('/login');
   };
@@ -215,43 +253,102 @@ const Profile = () => {
 
       {/* --- FÜLEK --- */}
       <div className="profile-tabs">
-        <button className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => setActiveTab('posts')}><FaCamera /> Saját képek</button>
-        <button className={`tab-btn ${activeTab === 'likes' ? 'active' : ''}`} onClick={() => setActiveTab('likes')}><FaHeart /> Kedvelések</button>
+        <button className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => handleTabChange('posts')}>
+          <FaCamera /> Saját képek
+        </button>
+        <button className={`tab-btn ${activeTab === 'likes' ? 'active' : ''}`} onClick={() => handleTabChange('likes')}>
+          <FaHeart /> Kedvelések
+        </button>
+        <button className={`tab-btn ${activeTab === 'collections' ? 'active' : ''}`} onClick={() => handleTabChange('collections')}>
+          <FaBookmark /> Gyűjtemények
+        </button>
       </div>
 
-      {/* --- GALÉRIA RÁCS --- */}
-      <div className="profile-gallery-grid">
-        {activeTab === 'posts' && (
-          myPosts.length > 0 ? (
-            myPosts.map(post => (
-              <div key={post.id} className="profile-gallery-item">
-                <img src={post.image_url} alt={post.title} loading="lazy" />
-                <div className="overlay">
-                  <span className="img-title">{post.title}</span>
-                  <div className="post-actions-wrapper">
-                    <button onClick={() => openEditPostModal(post)} className="action-btn edit-btn" title="Szerkesztés"><FaPen /></button>
-                    <button onClick={() => handleDeletePost(post.id)} className="action-btn delete-btn" title="Törlés"><FaTrash /></button>
+      {/* --- GALÉRIA RÁCS (Saját és Kedvelt képek) --- */}
+      {activeTab !== 'collections' && (
+        <div className="profile-gallery-grid">
+          {activeTab === 'posts' && (
+            myPosts.length > 0 ? (
+              myPosts.map(post => (
+                <div key={post.id} className="profile-gallery-item">
+                  <img src={post.image_url} alt={post.title} loading="lazy" />
+                  <div className="overlay">
+                    <span className="img-title">{post.title}</span>
+                    <div className="post-actions-wrapper">
+                      <button onClick={() => openEditPostModal(post)} className="action-btn edit-btn" title="Szerkesztés"><FaPen /></button>
+                      <button onClick={() => handleDeletePost(post.id)} className="action-btn delete-btn" title="Törlés"><FaTrash /></button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : ( <div className="empty-state">Még nem töltöttél fel képet.</div> )
-        )}
+              ))
+            ) : ( <div className="empty-state">Még nem töltöttél fel képet.</div> )
+          )}
 
-        {activeTab === 'likes' && (
-          likedPosts.length > 0 ? (
-            likedPosts.map(post => (
-              <div key={post.id} className="profile-gallery-item">
-                <img src={post.image_url} alt={post.title} loading="lazy" />
-                <div className="overlay">
-                  <span className="img-title">{post.title}</span>
-                  <span className="img-user">@{post.username}</span>
+          {activeTab === 'likes' && (
+            likedPosts.length > 0 ? (
+              likedPosts.map(post => (
+                <div key={post.id} className="profile-gallery-item">
+                  <img src={post.image_url} alt={post.title} loading="lazy" />
+                  <div className="overlay">
+                    <span className="img-title">{post.title}</span>
+                    <span className="img-user">@{post.username}</span>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : ( <div className="empty-state">Még nem kedveltél egyetlen alkotást sem.</div> )
-        )}
-      </div>
+              ))
+            ) : ( <div className="empty-state">Még nem kedveltél egyetlen alkotást sem.</div> )
+          )}
+        </div>
+      )}
+
+      {/* --- ÚJ: GYŰJTEMÉNYEK NÉZET --- */}
+      {activeTab === 'collections' && (
+        !activeCollection ? (
+          collections.length > 0 ? (
+            <div className="collections-grid">
+              {collections.map(col => (
+                <div key={col.id} className="collection-card" onClick={() => openCollection(col)}>
+                  <div className="collection-cover">
+                    {col.cover_image ? (
+                      <img src={col.cover_image} alt="Borító" />
+                    ) : (
+                      <div className="empty-cover"><FaBookmark /></div>
+                    )}
+                    <div className="collection-count">{col.item_count} kép</div>
+                  </div>
+                  <h3 className="collection-title">{col.name}</h3>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">Még nem hoztál létre gyűjteményt. Ezt a Galériában, a képeken lévő Mentés gombbal teheted meg!</div>
+          )
+        ) : (
+          <div className="collection-view">
+            <div className="collection-view-header">
+              <button onClick={closeCollection} className="back-to-collections-btn">
+                <FaArrowLeft /> Vissza a mappákhoz
+              </button>
+              <h2>{activeCollection.name}</h2>
+            </div>
+            
+            <div className="profile-gallery-grid">
+              {collectionPosts.length > 0 ? (
+                collectionPosts.map(post => (
+                  <div key={post.id} className="profile-gallery-item">
+                    <img src={post.image_url} alt={post.title} loading="lazy" />
+                    <div className="overlay">
+                      <span className="img-title">{post.title}</span>
+                      <span className="img-user">@{post.username}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state">Ez a mappa jelenleg üres.</div>
+              )}
+            </div>
+          </div>
+        )
+      )}
 
       {/* ========================================= */}
       {/* 🔥 PROFIL SZERKESZTÉSE MODAL 🔥          */}
